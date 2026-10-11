@@ -16,7 +16,7 @@ const LEGEND = [
 
 const makePlayer = (i) => ({ name: DEFAULT_NAMES[i], token: TOKENS[i], color: PLAYER_COLORS[i], isAI: i > 0 })
 
-export default function Setup({ onStart }) {
+export default function Setup({ onStart, onBack }) {
   const [players, setPlayers] = useState([0, 1, 2, 3].map(makePlayer))
 
   const update = (i, patch) => setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)))
@@ -46,6 +46,9 @@ export default function Setup({ onStart }) {
 
   return (
     <div className="setup">
+      <button className="btn ghost back-btn" onClick={onBack}>
+        ← All games
+      </button>
       <div className="setup-hero">
         <div className="logo-mark big">◈</div>
         <h1 className="logo">CRYPTOPOLY</h1>

@@ -1,6 +1,9 @@
-# Cryptopoly ◈
+# Degen Arcade ◈
 
-A Monopoly clone in React with the standard rules, re-skinned with crypto names.
+Two classic board games in React, re-skinned with crypto names. The start menu lets you create a game of either:
+
+- **Cryptopoly**: Monopoly with the standard rules
+- **Settlers of Satoshi**: Catan (base game) with the standard rules, described [below](#settlers-of-satoshi-)
 
 ```bash
 npm install
@@ -8,7 +11,7 @@ npm run dev      # http://localhost:5173
 npm run build    # static build in dist/
 ```
 
-## Name map
+## Cryptopoly name map
 
 | Cryptopoly | Classic |
 | --- | --- |
@@ -23,7 +26,7 @@ npm run build    # static build in dist/
 | Nodes / Data Centers | Houses / Hotels |
 | Shitcoin Alley … Bitcoin Boardwalk | Mediterranean … Boardwalk |
 
-## Rules implemented
+## Cryptopoly rules implemented
 
 - $1,500 start, $200 for passing GO; prices and rent tables match the original board
 - Doubles roll again; three doubles in a row sends you to custody
@@ -39,8 +42,44 @@ npm run build    # static build in dist/
 
 2 to 6 players. Any mix of humans (hot-seat on one screen) and bots. The game autosaves to `localStorage`, so a refresh resumes it.
 
+## Settlers of Satoshi ⬡
+
+### Name map
+
+| Settlers of Satoshi | Catan |
+| --- | --- |
+| Chips 💾 / Fab Lab | Brick / Hills |
+| Fiber 🔌 / Fiber Forest | Lumber / Forest |
+| Memes 🐸 / Meme Farm | Wool / Pasture |
+| Stake 🥩 / Staking Fields | Grain / Fields |
+| Hash ⛏️ / Mining Peaks | Ore / Mountains |
+| Bear Market | Desert |
+| Channel / Node / Data Center | Road / Settlement / City |
+| The Hacker 🥷 | Robber |
+| Smart Contracts 📜 | Development cards |
+| Hacker · Layer 2 Rollup · Airdrop · Rug Pull · Rare NFT | Knight · Road Building · Year of Plenty · Monopoly · Victory Point |
+| Longest Chain ⛓️ / Largest Botnet 🤖 | Longest Road / Largest Army |
+| DEX 3:1 / CEX 2:1 | Generic / special harbors |
+| Liquidated | Discard on a 7 |
+
+### Rules implemented
+
+- Random 19-tile board with the standard terrain and number mix (6s and 8s are never adjacent) and 9 harbors
+- Genesis round: snake-order placement of 2 nodes and 2 channels each; the second node pays out its neighboring resources
+- Distance rule; nodes must connect to your channels; opponents' buildings block channel connections
+- Piece limits (15 channels, 5 nodes, 4 data centers) and a bank of 19 per resource, with the shortage rule
+- Rolling a 7: anyone holding more than 7 cards discards half, then the Hacker moves and steals 1 random resource
+- 25 smart contracts (14 Hacker, 5 Rare NFT, 2 each of the rest). One per turn, never on the turn bought; a Hacker may be played before rolling
+- Longest Chain (5+, broken by opponents' nodes, ties keep the holder) and Largest Botnet (3+) are worth 2 VP each
+- Market swaps at 4:1, or better with harbors; OTC trades with other players (bots answer instantly; humans accept on the shared screen)
+- First to 10 VP on their own turn wins
+
+3 to 4 players, any mix of humans (hot-seat) and bots, autosaved to `localStorage`.
+
 ## Code layout
 
+- `src/App.jsx`, `src/Menu.jsx`: start menu that launches either game
+- `src/catan/`: Settlers of Satoshi (`data.js` board + geometry, `engine.js` rules reducer, `ai.js` bots, `components/`)
 - `src/data/` — board spaces and card decks
 - `src/engine/game.js` — pure reducer with all game rules
 - `src/engine/ai.js` — bot decisions (buy, bid, build, raise funds, evaluate trades)

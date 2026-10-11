@@ -64,7 +64,7 @@ function PlayerCard({ state, p, openModal }) {
   )
 }
 
-export default function Sidebar({ state, openModal, onQuit }) {
+export default function Sidebar({ state, openModal, onQuit, onMenu }) {
   const logRef = useRef(null)
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' })
@@ -93,6 +93,9 @@ export default function Sidebar({ state, openModal, onQuit }) {
         </button>
         <button className="btn ghost" onClick={onQuit}>
           ↺ New game
+        </button>
+        <button className="btn ghost" onClick={onMenu}>
+          ⌂ Menu
         </button>
       </div>
 
