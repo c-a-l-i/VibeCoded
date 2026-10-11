@@ -1,122 +1,93 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useCallback, useEffect, useReducer, useState } from 'react'
+import { reducer, rollDice, actingPlayer } from './engine/game.js'
+import { aiAction } from './engine/ai.js'
+import Setup from './components/Setup.jsx'
+import Board from './components/Board.jsx'
+import Center from './components/Center.jsx'
+import Sidebar from './components/Sidebar.jsx'
+import DeedModal from './components/DeedModal.jsx'
+import PortfolioModal from './components/PortfolioModal.jsx'
+import TradeModal from './components/TradeModal.jsx'
+import GameOver from './components/GameOver.jsx'
 
-function App() {
-  const [count, setCount] = useState(0)
+const SAVE_KEY = 'cryptopoly-save-v1'
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function loadSave() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVE_KEY))
+  } catch {
+    return null
+  }
 }
 
-export default App
+export default function App() {
+  const [state, dispatch] = useReducer(reducer, null, loadSave)
+  const [rolling, setRolling] = useState(false)
+  // { type: 'deed', id } | { type: 'portfolio' } | { type: 'trade' }
+  const [modal, setModal] = useState(null)
+
+  useEffect(() => {
+    try {
+      if (state) localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+      else localStorage.removeItem(SAVE_KEY)
+    } catch {
+      /* storage unavailable — game just won't persist */
+    }
+  }, [state])
+
+  const act = useCallback((action) => {
+    if (action.type === 'ROLL') {
+      setRolling(true)
+      setTimeout(() => {
+        dispatch({ type: 'ROLL', dice: rollDice() })
+        setRolling(false)
+      }, 750)
+      return
+    }
+    dispatch(action)
+  }, [])
+
+  // Token movement, one space per tick.
+  useEffect(() => {
+    if (state?.phase !== 'moving') return
+    const t = setTimeout(() => dispatch({ type: 'STEP' }), state.moving.steps > 8 ? 85 : 190)
+    return () => clearTimeout(t)
+  }, [state])
+
+  // Bots take their actions with a little human-like delay.
+  const actor = state && state.phase !== 'gameover' ? state.players[actingPlayer(state)] : null
+  useEffect(() => {
+    if (!state || !actor?.isAI || rolling || ['moving', 'gameover'].includes(state.phase)) return
+    const delay = { card: 1800, auction: 650, buy: 1100 }[state.phase] ?? 850
+    const t = setTimeout(() => {
+      const a = aiAction(state)
+      if (a) act(a)
+    }, delay)
+    return () => clearTimeout(t)
+  }, [state, actor, rolling, act])
+
+  if (!state) return <Setup onStart={(players) => dispatch({ type: 'NEW_GAME', players })} />
+
+  const quit = () => {
+    if (state.phase === 'gameover' || confirm('Abandon this game and start a new one?')) {
+      setModal(null)
+      dispatch({ type: 'QUIT' })
+    }
+  }
+
+  return (
+    <div className="app">
+      <main className="layout">
+        <Board state={state} onSpaceClick={(id) => setModal({ type: 'deed', id })}>
+          <Center state={state} rolling={rolling} act={act} openModal={setModal} />
+        </Board>
+        <Sidebar state={state} openModal={setModal} onQuit={quit} />
+      </main>
+
+      {modal?.type === 'deed' && <DeedModal state={state} id={modal.id} onClose={() => setModal(null)} />}
+      {modal?.type === 'portfolio' && <PortfolioModal state={state} act={act} onClose={() => setModal(null)} />}
+      {modal?.type === 'trade' && <TradeModal state={state} act={act} onClose={() => setModal(null)} />}
+      {state.phase === 'gameover' && <GameOver state={state} onNew={quit} />}
+    </div>
+  )
+}
