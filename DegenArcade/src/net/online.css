@@ -1,0 +1,269 @@
+/* Online play: menu panel, lobby and the in-game room bar. Builds on the shared tokens in index.css. */
+
+/* ---------- menu panel ---------- */
+
+.on-panel {
+  width: min(1180px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) auto;
+  grid-template-areas:
+    'head name join'
+    'hosts hosts hosts';
+  gap: 14px 18px;
+  align-items: end;
+  padding: 18px 22px;
+}
+.on-panel > div:first-child {
+  grid-area: head;
+}
+.on-panel > .field {
+  grid-area: name;
+}
+.on-panel-title {
+  margin-top: 4px;
+  font-size: 18px;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.on-hosts {
+  grid-area: hosts;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.on-hosts .btn {
+  flex: 1;
+}
+.on-join {
+  grid-area: join;
+  display: flex;
+  gap: 8px;
+}
+.on-join input {
+  width: 92px;
+  text-align: center;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.on-panel .on-error,
+.on-panel .on-status {
+  grid-column: 1 / -1;
+}
+
+.on-status {
+  font-size: 12.5px;
+  color: var(--gold);
+}
+.on-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ---------- lobby ---------- */
+
+.on-title {
+  font-size: clamp(30px, 6vw, 60px);
+}
+.on-code {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 14px 22px;
+  width: min(900px, 100%);
+}
+.on-code p {
+  margin: 0;
+  max-width: 260px;
+}
+.on-code-text {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px rgba(123, 92, 255, 0.5));
+}
+.on-lobby .on-error {
+  width: min(900px, 100%);
+}
+.on-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  width: min(900px, 100%);
+  align-items: start;
+}
+.on-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+.on-seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 520px;
+  overflow: auto;
+}
+.on-seat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  min-height: 40px;
+}
+.on-seat.human {
+  border-color: rgba(61, 255, 143, 0.35);
+  background: rgba(61, 255, 143, 0.04);
+}
+.on-seat.mine {
+  border-color: rgba(255, 210, 63, 0.6);
+  background: rgba(255, 210, 63, 0.06);
+}
+.on-seat.open {
+  border-style: dashed;
+}
+.on-seat-n {
+  width: 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.on-seat-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+.on-seat.bot .on-seat-name {
+  font-weight: 400;
+  color: #c4cae6;
+}
+.on-seat-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.on-name {
+  display: flex;
+  gap: 8px;
+}
+.on-name input {
+  flex: 1;
+  min-width: 0;
+}
+.on-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.on-options .ts-setup-list {
+  max-height: 300px;
+}
+.on-wait {
+  margin: 4px 0 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------- in game ---------- */
+
+.on-bar {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: min(320px, calc(100vw - 28px));
+}
+.on-bar-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: rgba(10, 13, 30, 0.92);
+  backdrop-filter: blur(10px);
+  font-size: 12.5px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+.on-bar-menu {
+  order: -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 280px;
+  background: rgba(12, 16, 36, 0.97);
+}
+.on-bar-menu p {
+  margin: 0;
+}
+.on-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 45;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line2);
+  background: rgba(12, 16, 36, 0.95);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 13.5px;
+  animation: fade-up 0.25s ease-out;
+}
+.on-offer {
+  width: min(420px, 100%);
+  text-align: center;
+}
+.on-offer .modal-body {
+  align-items: center;
+}
+.on-offer-title {
+  font-size: 18px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.on-offer p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .on-panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'name'
+      'hosts'
+      'join';
+  }
+  .on-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .on-code-text {
+    font-size: 32px;
+  }
+}
