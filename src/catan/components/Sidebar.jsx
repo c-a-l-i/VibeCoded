@@ -12,7 +12,7 @@ function PlayerCard({ state, p, viewer }) {
         <div className="player-id">
           <div className="player-name">
             {p.name}
-            {p.isAI && <span className="tag">BOT</span>}
+            {p.isAI && <span className="tag">{p.remote ? '🌐 ONLINE' : 'BOT'}</span>}
             {state.longest?.pid === p.id && <span className="tag warn">⛓️ LONGEST CHAIN</span>}
             {state.army?.pid === p.id && <span className="tag warn">🤖 BOTNET</span>}
           </div>

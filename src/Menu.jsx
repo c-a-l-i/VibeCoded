@@ -1,29 +1,13 @@
-const GAMES = [
-  {
-    id: 'cryptopoly',
-    mark: '◈',
-    title: 'CRYPTOPOLY',
-    tagline: 'Buy the dip. Stack nodes. Bankrupt your friends.',
-    classic: 'Monopoly rules',
-    chips: ['2–6 players', '🎲 Roll & move', '🏢 Data centers', '🔒 SEC custody'],
-  },
-  {
-    id: 'catan',
-    mark: '⬡',
-    title: 'SETTLERS OF SATOSHI',
-    tagline: 'Mine the island. Open channels. Moon at 10 VP.',
-    classic: 'Catan rules',
-    chips: ['3–4 players', '⚡ Channels', '🥷 The Hacker', '📜 Smart contracts'],
-  },
-]
+import { GAMES } from './games.js'
+import { OnlinePanel } from './net/Online.jsx'
 
-export default function Menu({ saves, onPlay }) {
+export default function Menu({ saves, onPlay, n }) {
   return (
     <div className="setup menu">
       <div className="setup-hero">
         <div className="logo-mark big">◈</div>
         <h1 className="logo">DEGEN ARCADE</h1>
-        <p className="tagline">Two classic board games. Zero fundamentals.</p>
+        <p className="tagline">Three classic games. Zero fundamentals.</p>
       </div>
 
       <div className="menu-grid">
@@ -53,7 +37,8 @@ export default function Menu({ saves, onPlay }) {
           </section>
         ))}
       </div>
-      <p className="hint">Hot-seat on one screen with any mix of humans and bots. Games autosave in this browser.</p>
+      <OnlinePanel n={n} />
+      <p className="hint">Play on one screen (hot-seat) or online with friends, with bots in any empty seats. Local games autosave in this browser.</p>
     </div>
   )
 }

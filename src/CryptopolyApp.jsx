@@ -20,20 +20,24 @@ function loadSave() {
   }
 }
 
-export default function CryptopolyApp({ onMenu }) {
-  const [state, dispatch] = useReducer(reducer, null, loadSave)
+// `net` is set for online games: the server owns the state, runs the bots and moves the tokens.
+export default function CryptopolyApp({ onMenu, net = null }) {
+  const [local, localDispatch] = useReducer(reducer, null, () => (net ? null : loadSave()))
+  const state = net ? net.state : local
+  const dispatch = net ? net.send : localDispatch
   const [rolling, setRolling] = useState(false)
   // { type: 'deed', id } | { type: 'portfolio' } | { type: 'trade' }
   const [modal, setModal] = useState(null)
 
   useEffect(() => {
+    if (net) return
     try {
       if (state) localStorage.setItem(SAVE_KEY, JSON.stringify(state))
       else localStorage.removeItem(SAVE_KEY)
     } catch {
       /* storage unavailable — game just won't persist */
     }
-  }, [state])
+  }, [state, net])
 
   const act = useCallback((action) => {
     if (action.type === 'ROLL') {
@@ -45,30 +49,32 @@ export default function CryptopolyApp({ onMenu }) {
       return
     }
     dispatch(action)
-  }, [])
+  }, [dispatch])
 
   // Token movement, one space per tick.
   useEffect(() => {
-    if (state?.phase !== 'moving') return
+    if (net || state?.phase !== 'moving') return
     const t = setTimeout(() => dispatch({ type: 'STEP' }), state.moving.steps > 8 ? 85 : 190)
     return () => clearTimeout(t)
-  }, [state])
+  }, [state, net, dispatch])
 
   // Bots take their actions with a little human-like delay.
   const actor = state && state.phase !== 'gameover' ? state.players[actingPlayer(state)] : null
   useEffect(() => {
-    if (!state || !actor?.isAI || rolling || ['moving', 'gameover'].includes(state.phase)) return
+    if (net || !state || !actor?.isAI || rolling || ['moving', 'gameover'].includes(state.phase)) return
     const delay = { card: 1800, auction: 650, buy: 1100 }[state.phase] ?? 850
     const t = setTimeout(() => {
       const a = aiAction(state)
       if (a) act(a)
     }, delay)
     return () => clearTimeout(t)
-  }, [state, actor, rolling, act])
+  }, [state, actor, rolling, act, net])
 
+  if (!state && net) return <p className="setup tagline">Loading the game…</p>
   if (!state) return <Setup onStart={(players) => dispatch({ type: 'NEW_GAME', players })} onBack={onMenu} />
 
   const quit = () => {
+    if (net) return net.toLobby()
     if (state.phase === 'gameover' || confirm('Abandon this game and start a new one?')) {
       setModal(null)
       dispatch({ type: 'QUIT' })

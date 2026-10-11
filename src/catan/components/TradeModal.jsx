@@ -61,7 +61,8 @@ function Otc({ state, act, onClose }) {
   const ready = bagSize(give) > 0 && bagSize(get) > 0
 
   const execute = (to) => {
-    act({ type: 'TRADE', trade: { from: p.id, to, give, get } })
+    const trade = { type: 'TRADE', trade: { from: p.id, to, give, get } }
+    act(state.players[to].remote ? { type: 'OFFER', action: trade } : trade)
     onClose()
   }
 
@@ -82,7 +83,7 @@ function Otc({ state, act, onClose }) {
         {others.map((o) => {
           const trade = { from: p.id, to: o.id, give, get }
           const check = ready ? tradeCheck(state, trade) : { ok: false, reason: 'Build an offer' }
-          const accepts = check.ok && (!o.isAI || wouldAccept(state, o.id, trade))
+          const accepts = check.ok && (!o.isAI || o.remote || wouldAccept(state, o.id, trade))
           return (
             <div key={o.id} className="st-cp" style={{ '--c': o.color }}>
               <span className="who">
@@ -90,10 +91,22 @@ function Otc({ state, act, onClose }) {
                 {o.name}
               </span>
               <span className="muted small">
-                {o.isAI ? (!check.ok ? check.reason : accepts ? '✅ will take it' : '❌ not interested') : check.ok ? 'hand them the screen' : check.reason}
+                {o.remote
+                  ? check.ok
+                    ? 'they decide on their screen'
+                    : check.reason
+                  : o.isAI
+                    ? !check.ok
+                      ? check.reason
+                      : accepts
+                        ? '✅ will take it'
+                        : '❌ not interested'
+                    : check.ok
+                      ? 'hand them the screen'
+                      : check.reason}
               </span>
               <button className="btn tiny" disabled={!accepts} onClick={() => execute(o.id)}>
-                {o.isAI ? 'Execute' : `Accept as ${o.name}`}
+                {o.remote ? '📨 Send offer' : o.isAI ? 'Execute' : `Accept as ${o.name}`}
               </button>
             </div>
           )

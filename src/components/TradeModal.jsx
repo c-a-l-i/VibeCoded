@@ -84,7 +84,10 @@ export default function TradeModal({ state, act, onClose }) {
   }
 
   const propose = () => {
-    if (partner.isAI) {
+    if (partner.remote) {
+      act({ type: 'OFFER', action: { type: 'TRADE', offer } })
+      onClose()
+    } else if (partner.isAI) {
       if (aiAcceptsTrade(state, offer)) {
         act({ type: 'TRADE', offer })
         onClose()
@@ -102,7 +105,7 @@ export default function TradeModal({ state, act, onClose }) {
       <div className="tabs">
         {partners.map((x) => (
           <button key={x.id} className={`tab ${x.id === partnerId ? 'on' : ''}`} style={{ '--c': x.color }} onClick={() => pickPartner(x.id)}>
-            {x.token} {x.name} {x.isAI ? '🤖' : ''}
+            {x.token} {x.name} {x.remote ? '🌐' : x.isAI ? '🤖' : ''}
           </button>
         ))}
       </div>
@@ -144,7 +147,7 @@ export default function TradeModal({ state, act, onClose }) {
           <div className="row end">
             {!check.ok && <span className="muted small">{check.reason}</span>}
             <button className="btn primary" disabled={!check.ok} onClick={propose}>
-              Propose trade
+              {partner.remote ? '📨 Send offer' : 'Propose trade'}
             </button>
           </div>
         </>

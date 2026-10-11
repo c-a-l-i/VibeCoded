@@ -26,7 +26,7 @@ function PlayerCard({ state, p, openModal }) {
         <div className="player-id">
           <div className="player-name">
             {p.name}
-            {p.isAI && <span className="tag">BOT</span>}
+            {p.isAI && <span className="tag">{p.remote ? '🌐 ONLINE' : 'BOT'}</span>}
             {p.inJail && <span className="tag warn">🔒 CUSTODY</span>}
             {p.cards.length > 0 && <span className="tag">🎟️×{p.cards.length}</span>}
             {p.bankrupt && <span className="tag neg">REKT</span>}
