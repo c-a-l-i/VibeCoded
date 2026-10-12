@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { RESOURCES, RES, DEV, WIN_VP } from '../data.js'
 import { chainLength, handSize, victoryPoints } from '../engine.js'
+import DisplayButton from '../../components/DisplaySettings.jsx'
 
 function PlayerCard({ state, p, viewer }) {
   const active = state.current === p.id && state.phase !== 'gameover'
@@ -102,6 +103,7 @@ export default function Sidebar({ state, viewer, onQuit, onMenu }) {
         <button className="btn ghost" onClick={onMenu}>
           ⌂ Main menu
         </button>
+        <DisplayButton icon />
       </div>
 
       <div className="panel log-panel">

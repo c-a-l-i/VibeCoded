@@ -1,9 +1,11 @@
 import { GAMES } from './games.js'
 import { OnlinePanel } from './net/Online.jsx'
+import DisplayButton from './components/DisplaySettings.jsx'
 
 export default function Menu({ saves, onPlay, n }) {
   return (
     <div className="setup menu">
+      <DisplayButton className="corner-btn" />
       <div className="setup-hero">
         <div className="logo-mark big">◈</div>
         <h1 className="logo">DEGEN ARCADE</h1>

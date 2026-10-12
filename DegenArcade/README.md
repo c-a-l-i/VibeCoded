@@ -12,6 +12,15 @@ npm run dev      # http://localhost:5173 (local play)
 npm run host     # build, then serve the app and the online server on http://localhost:8787
 ```
 
+## Display and color-blind settings 🎨
+
+The 🎨 button (top right of the menu and setup screens, and in every game's toolbar) opens the Display settings. They're saved per browser, so each friend in an online game picks their own.
+
+- **Color vision:** Standard, Deuteranopia, Protanopia or Tritanopia. Each mode swaps in its own player, property-set, resource and good/bad colors, chosen so they stay distinct for that type of color vision.
+- **Shape cues:** patterns on the Cryptopoly sets, the owner's token on owned spaces, and a different line style per player plus tokens on Settlers of Satoshi pieces, so nothing depends on color alone.
+
+All colors are CSS variables in `src/theme.css` (players `--p1`…`--p15`, sets `--g-*`, resources `--r-*`, `--good`/`--bad`/`--warn`/`--neutral`), with one block per color-vision mode. Game data refers to them as `var(--…)` instead of hex values.
+
 ## Playing online with friends 🌐
 
 `npm run host` builds the app and starts one Node server (`server/index.js`) that serves it and hosts game rooms over a WebSocket at `/ws`. Set `PORT` to change the port from 8787. On startup it prints the address friends on your Wi-Fi can open.
@@ -145,6 +154,7 @@ Bots claim roles, share results, fake-claim (evil bots choose covers that fit a 
 ## Code layout
 
 - `src/App.jsx`, `src/Menu.jsx`, `src/games.js`: start menu that launches each game
+- `src/theme.css`, `src/display.js`, `src/components/DisplaySettings.jsx`: color tokens per color-vision mode, the saved Display settings, and their modal
 - `server/`: online server (`index.js` rooms, lobby and WebSocket protocol; `games.js` per-game rules for turns, bots and what each seat sees)
 - `src/net/`: online client (`net.js` connection with reconnects, `Online.jsx` lobby, room bar and trade offers)
 - `src/catan/`: Settlers of Satoshi (`data.js` board + geometry, `engine.js` rules reducer, `ai.js` bots, `components/`)

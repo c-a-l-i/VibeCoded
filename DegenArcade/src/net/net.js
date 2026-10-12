@@ -1,6 +1,7 @@
 // Connection to the Degen Arcade server. One shared WebSocket for the whole app, with automatic reconnects,
 // exposed to React through useNet(). The server runs the games; this just mirrors what it sends.
 import { useSyncExternalStore } from 'react'
+import { upgradeColors } from '../display.js'
 
 const ID_KEY = 'degen-arcade-client'
 const NAME_KEY = 'degen-arcade-name'
@@ -80,7 +81,7 @@ function connect() {
         set({ room: m.room })
         break
       case 'state':
-        set({ state: m.state })
+        set({ state: upgradeColors(m.state) })
         break
       case 'chat':
         set({ chat: m.reset ? m.msgs : [...snap.chat, ...m.msgs] })

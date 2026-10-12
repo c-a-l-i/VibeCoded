@@ -1,22 +1,7 @@
+/* Colors live in theme.css (one palette per color-vision mode). */
 :root {
-  --bg: #05060d;
-  --panel: rgba(16, 20, 40, 0.72);
-  --cell: #0c1022;
-  --cell-hover: #141a36;
-  --line: rgba(130, 150, 255, 0.13);
-  --line2: rgba(150, 170, 255, 0.24);
-  --text: #e8ecff;
-  --muted: #8a93b8;
-  --cyan: #00f0ff;
-  --violet: #7b5cff;
-  --magenta: #ff3df2;
-  --gold: #ffd23f;
-  --green: #3dff8f;
-  --red: #ff4d6d;
-  --grad: linear-gradient(120deg, var(--cyan), var(--violet) 50%, var(--magenta));
   --sans: 'Space Grotesk', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
-  color-scheme: dark;
 }
 
 * {
@@ -33,11 +18,8 @@ body {
   font-family: var(--sans);
   color: var(--text);
   background:
-    radial-gradient(1100px 700px at 0% -10%, rgba(123, 92, 255, 0.22), transparent 60%),
-    radial-gradient(900px 700px at 105% 110%, rgba(0, 240, 255, 0.13), transparent 60%),
-    radial-gradient(700px 500px at 100% 0%, rgba(255, 61, 242, 0.08), transparent 60%),
-    linear-gradient(rgba(130, 150, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
-    linear-gradient(90deg, rgba(130, 150, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
+    radial-gradient(1200px 800px at 0% -10%, color-mix(in srgb, var(--violet) 9%, transparent), transparent 60%),
+    radial-gradient(1000px 800px at 105% 110%, color-mix(in srgb, var(--cyan) 6%, transparent), transparent 60%),
     var(--bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -122,23 +104,20 @@ h2 {
   cursor: not-allowed;
 }
 .btn.primary {
-  background: var(--grad);
+  background: var(--primary);
   border-color: transparent;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  color: #f3f2fa;
   box-shadow:
-    0 0 24px rgba(123, 92, 255, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 4px 14px rgba(8, 9, 20, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .btn.primary:hover:not(:disabled) {
-  background: var(--grad);
-  box-shadow:
-    0 0 34px rgba(255, 61, 242, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--primary-hover);
+  border-color: transparent;
 }
 .btn.danger {
   color: var(--red);
-  border-color: rgba(255, 77, 109, 0.45);
+  border-color: color-mix(in srgb, var(--red) 45%, transparent);
 }
 .btn.ghost {
   background: transparent;
@@ -229,14 +208,12 @@ h2 {
   grid-template-rows: calc(var(--u) * 1.6) repeat(9, var(--u)) calc(var(--u) * 1.6);
   border-radius: 14px;
   overflow: hidden;
-  background: #070a17;
+  background: var(--bg);
   box-shadow:
-    0 0 0 1px rgba(150, 170, 255, 0.25),
-    0 0 0 6px rgba(10, 13, 30, 0.9),
-    0 0 0 7px rgba(150, 170, 255, 0.18),
-    0 0 90px rgba(0, 240, 255, 0.12),
-    0 0 180px rgba(255, 61, 242, 0.1),
-    0 30px 80px rgba(0, 0, 0, 0.6);
+    0 0 0 1px var(--line2),
+    0 0 0 6px var(--panel-solid),
+    0 0 0 7px var(--line),
+    0 24px 60px rgba(5, 6, 12, 0.5);
 }
 
 .space {
@@ -253,9 +230,7 @@ h2 {
 }
 .space.here {
   z-index: 2;
-  box-shadow:
-    inset 0 0 0 2px var(--here),
-    0 0 22px color-mix(in srgb, var(--here) 60%, transparent);
+  box-shadow: inset 0 0 0 2px var(--here);
 }
 
 .space-inner {
@@ -284,10 +259,8 @@ h2 {
   flex: none;
   width: 100%;
   height: calc(var(--u) * 0.3);
-  background: var(--group);
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--group) 55%, transparent),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  background-color: var(--group);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,17 +270,16 @@ h2 {
   width: calc(var(--u) * 0.15);
   height: calc(var(--u) * 0.15);
   border-radius: 3px;
-  background: #07140d;
-  border: 1.5px solid #e9fff2;
-  box-shadow: 0 0 6px rgba(61, 255, 143, 0.8);
+  background: var(--ink);
+  border: 1.5px solid var(--text);
 }
 .dc {
   width: calc(var(--u) * 0.56);
   height: calc(var(--u) * 0.18);
   border-radius: 3px;
-  background: #1a0717;
-  border: 1.5px solid #fff;
-  box-shadow: 0 0 10px var(--magenta);
+  background: var(--ink);
+  border: 1.5px solid var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--magenta);
 }
 
 .space-name {
@@ -315,12 +287,11 @@ h2 {
   font-weight: 600;
   line-height: 1.12;
   padding: calc(var(--u) * 0.07) calc(var(--u) * 0.05) 0;
-  color: #dfe4ff;
+  color: var(--text);
 }
 .space-icon {
   font-size: calc(var(--u) * 0.36);
   margin: auto 0;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25));
 }
 .space-price {
   margin-top: auto;
@@ -336,13 +307,13 @@ h2 {
   padding-top: calc(var(--u) * 0.1);
 }
 .type-chance .space-name {
-  color: #ffb36b;
+  color: var(--chance);
 }
 .type-chest .space-name {
-  color: #7fe8ff;
+  color: var(--chest);
 }
 .type-tax .space-name {
-  color: #ff8fa3;
+  color: var(--tax);
 }
 .owner-strip {
   position: absolute;
@@ -351,9 +322,26 @@ h2 {
   bottom: 0;
   height: calc(var(--u) * 0.075);
   background: var(--owner);
-  box-shadow: 0 0 12px var(--owner);
 }
-.space.mortgaged .space-inner > :not(.stamp):not(.owner-strip) {
+/* Shape cue: the owner's token in the corner, so ownership doesn't rely on the strip color. */
+.owner-token {
+  display: none;
+  position: absolute;
+  right: calc(var(--u) * 0.04);
+  bottom: calc(var(--u) * 0.11);
+  width: calc(var(--u) * 0.3);
+  height: calc(var(--u) * 0.3);
+  place-items: center;
+  border-radius: 30%;
+  font-size: calc(var(--u) * 0.18);
+  line-height: 1;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--owner);
+}
+:root[data-cues] .owner-token {
+  display: grid;
+}
+.space.mortgaged .space-inner > :not(.stamp):not(.owner-strip):not(.owner-token) {
   opacity: 0.35;
 }
 .stamp {
@@ -368,7 +356,7 @@ h2 {
   border: 1.5px solid var(--red);
   border-radius: 3px;
   padding: 1px 3px;
-  background: rgba(12, 16, 34, 0.85);
+  background: color-mix(in srgb, var(--cell) 88%, transparent);
 }
 
 /* corners */
@@ -387,7 +375,7 @@ h2 {
   justify-content: center;
   gap: calc(var(--u) * 0.04);
   padding: calc(var(--u) * 0.1);
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%);
 }
 .type-go {
   --accent: var(--cyan);
@@ -403,14 +391,12 @@ h2 {
 }
 .corner-icon {
   font-size: calc(var(--u) * 0.5);
-  filter: drop-shadow(0 0 10px var(--accent));
 }
 .corner-title {
   font-weight: 700;
   font-size: calc(var(--u) * 0.17);
   letter-spacing: 0.06em;
   color: var(--accent);
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .corner-sub {
   font-size: calc(var(--u) * 0.095);
@@ -444,17 +430,15 @@ h2 {
   display: grid;
   place-items: center;
   font-size: calc(var(--u) * 0.26);
-  background: radial-gradient(circle at 35% 30%, #2c3366, #090c1c 75%);
+  background: radial-gradient(circle at 35% 30%, #363c55, #191c29 75%);
   border: 2px solid var(--c);
-  box-shadow:
-    0 0 10px var(--c),
-    0 4px 10px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
   animation: hop 0.24s ease-out;
 }
 .token.active {
   animation:
     hop 0.24s ease-out,
-    glow 1.6s ease-in-out 0.24s infinite;
+    glow 2.4s ease-in-out 0.24s infinite;
 }
 .token.jailed {
   border-style: dashed;
@@ -471,9 +455,8 @@ h2 {
 @keyframes glow {
   50% {
     box-shadow:
-      0 0 22px var(--c),
-      0 0 4px #fff,
-      0 4px 10px rgba(0, 0, 0, 0.7);
+      0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent),
+      0 3px 8px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -484,7 +467,7 @@ h2 {
   grid-column: 2 / 11;
   position: relative;
   border: 0.5px solid var(--line);
-  background: radial-gradient(ellipse at 50% 45%, #12163a 0%, #080b1a 65%);
+  background: radial-gradient(ellipse at 50% 45%, #20243a 0%, var(--cell) 70%);
   overflow: hidden;
 }
 .center {
@@ -506,10 +489,7 @@ h2 {
   height: calc(var(--u) * 5.6);
   transform: translate(-50%, -50%) rotate(45deg);
   border-radius: calc(var(--u) * 0.6);
-  border: 1px solid rgba(123, 92, 255, 0.18);
-  box-shadow:
-    0 0 120px rgba(123, 92, 255, 0.18),
-    inset 0 0 80px rgba(0, 240, 255, 0.06);
+  border: 1px solid var(--line);
   pointer-events: none;
 }
 .brand {
@@ -525,7 +505,6 @@ h2 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 18px rgba(123, 92, 255, 0.55));
 }
 .brand .logo {
   font-size: calc(var(--u) * 0.5);
@@ -533,9 +512,6 @@ h2 {
 .logo-mark {
   font-size: calc(var(--u) * 0.48);
   color: var(--cyan);
-  text-shadow:
-    0 0 16px var(--cyan),
-    0 0 30px var(--magenta);
 }
 
 .decks {
@@ -566,26 +542,26 @@ h2 {
 .deck-chance {
   left: calc(var(--u) * 0.45);
   transform: rotate(-12deg);
-  color: #ffb36b;
-  border: 1.5px dashed rgba(255, 154, 60, 0.55);
-  background: linear-gradient(150deg, rgba(255, 154, 60, 0.14), rgba(255, 61, 242, 0.08));
+  color: var(--chance);
+  border: 1.5px dashed color-mix(in srgb, var(--chance) 45%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--chance) 10%, transparent), transparent);
   box-shadow:
-    3px 3px 0 -1px #0b0f22,
-    3px 3px 0 0 rgba(255, 154, 60, 0.3),
-    6px 6px 0 -1px #0b0f22,
-    6px 6px 0 0 rgba(255, 154, 60, 0.2);
+    3px 3px 0 -1px var(--cell),
+    3px 3px 0 0 color-mix(in srgb, var(--chance) 25%, transparent),
+    6px 6px 0 -1px var(--cell),
+    6px 6px 0 0 color-mix(in srgb, var(--chance) 16%, transparent);
 }
 .deck-chest {
   right: calc(var(--u) * 0.45);
   transform: rotate(12deg);
-  color: #7fe8ff;
-  border: 1.5px dashed rgba(0, 240, 255, 0.5);
-  background: linear-gradient(150deg, rgba(0, 240, 255, 0.12), rgba(123, 92, 255, 0.1));
+  color: var(--chest);
+  border: 1.5px dashed color-mix(in srgb, var(--chest) 45%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--chest) 10%, transparent), transparent);
   box-shadow:
-    -3px 3px 0 -1px #0b0f22,
-    -3px 3px 0 0 rgba(0, 240, 255, 0.3),
-    -6px 6px 0 -1px #0b0f22,
-    -6px 6px 0 0 rgba(0, 240, 255, 0.2);
+    -3px 3px 0 -1px var(--cell),
+    -3px 3px 0 0 color-mix(in srgb, var(--chest) 25%, transparent),
+    -6px 6px 0 -1px var(--cell),
+    -6px 6px 0 0 color-mix(in srgb, var(--chest) 16%, transparent);
 }
 
 /* dice */
@@ -599,10 +575,9 @@ h2 {
   height: calc(var(--u) * 0.72);
   padding: calc(var(--u) * 0.09);
   border-radius: 20%;
-  background: linear-gradient(145deg, #ffffff, #d5dbf3);
+  background: linear-gradient(145deg, #e3e5ed, #c2c7d6);
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.55),
-    0 0 26px rgba(0, 240, 255, 0.25),
+    0 6px 14px rgba(0, 0, 0, 0.45),
     inset 0 -3px 0 rgba(0, 0, 0, 0.12);
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
@@ -614,7 +589,7 @@ h2 {
   border-radius: 50%;
 }
 .die .pip {
-  background: radial-gradient(circle at 35% 35%, #4b3cff, #12103a);
+  background: radial-gradient(circle at 35% 35%, #4d5378, #1f2238);
 }
 .die.rolling {
   animation: tumble 0.32s linear infinite;
@@ -709,20 +684,20 @@ h2 {
   letter-spacing: 0.14em;
 }
 .reveal-chance .game-card {
-  background: linear-gradient(150deg, rgba(255, 154, 60, 0.2), rgba(255, 61, 242, 0.14)), #120e22;
-  border: 1px solid rgba(255, 154, 60, 0.6);
-  box-shadow: 0 0 40px rgba(255, 120, 60, 0.25);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--chance) 14%, transparent), transparent), var(--raised);
+  border: 1px solid color-mix(in srgb, var(--chance) 50%, transparent);
+  box-shadow: var(--shadow);
 }
 .reveal-chance .game-card-title {
-  color: #ffb36b;
+  color: var(--chance);
 }
 .reveal-chest .game-card {
-  background: linear-gradient(150deg, rgba(0, 240, 255, 0.16), rgba(123, 92, 255, 0.16)), #0c1228;
-  border: 1px solid rgba(0, 240, 255, 0.55);
-  box-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--chest) 12%, transparent), transparent), var(--raised);
+  border: 1px solid color-mix(in srgb, var(--chest) 50%, transparent);
+  box-shadow: var(--shadow);
 }
 .reveal-chest .game-card-title {
-  color: #7fe8ff;
+  color: var(--chest);
 }
 @keyframes flip-in {
   from {
@@ -768,7 +743,7 @@ h2 {
 .chip.on {
   color: var(--text);
   border-color: var(--c);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 50%, transparent);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
 }
 
 .ticker {
@@ -785,7 +760,7 @@ h2 {
   text-overflow: ellipsis;
   padding: 2px 0 2px 8px;
   border-left: 2px solid var(--c);
-  color: #c4cae6;
+  color: var(--text-2);
 }
 .ticker li:nth-child(2) {
   opacity: 0.65;
@@ -804,17 +779,18 @@ h2 {
   margin: 0 auto;
   border-radius: 14px;
   overflow: hidden;
-  background: #0f1430;
-  border: 1px solid color-mix(in srgb, var(--group) 55%, transparent);
-  box-shadow: 0 0 34px color-mix(in srgb, var(--group) 22%, transparent);
+  background: var(--raised);
+  border: 1px solid color-mix(in srgb, var(--group) 50%, transparent);
+  box-shadow: var(--shadow);
 }
 .deed.compact {
   width: min(calc(var(--u) * 3.6), 100%);
   font-size: 0.9em;
 }
 .deed-head {
-  background: var(--group);
-  color: #0a0d1d;
+  background: color-mix(in srgb, var(--group) 18%, var(--raised));
+  border-top: 6px solid var(--group);
+  color: var(--text);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -822,7 +798,7 @@ h2 {
   text-align: center;
 }
 .deed-head .eyebrow {
-  color: rgba(10, 13, 29, 0.7);
+  color: color-mix(in srgb, var(--group) 65%, var(--text));
   font-weight: 600;
 }
 .deed-head strong {
@@ -879,7 +855,6 @@ h2 {
 }
 .info-icon {
   font-size: 54px;
-  filter: drop-shadow(0 0 16px rgba(123, 92, 255, 0.6));
 }
 
 /* ---------- sidebar ---------- */
@@ -911,9 +886,7 @@ h2 {
 .player.active {
   border-color: var(--c);
   background: color-mix(in srgb, var(--c) 7%, transparent);
-  box-shadow:
-    0 0 0 1px var(--c),
-    0 0 26px color-mix(in srgb, var(--c) 30%, transparent);
+  box-shadow: 0 0 0 1px var(--c);
 }
 .player.bankrupt {
   opacity: 0.4;
@@ -932,9 +905,8 @@ h2 {
   display: grid;
   place-items: center;
   font-size: 21px;
-  background: radial-gradient(circle at 35% 30%, #2c3366, #090c1c 75%);
+  background: radial-gradient(circle at 35% 30%, #363c55, #191c29 75%);
   border: 2px solid var(--c);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 60%, transparent);
 }
 .player-id {
   flex: 1;
@@ -963,11 +935,11 @@ h2 {
 }
 .tag.warn {
   color: var(--gold);
-  border-color: rgba(255, 210, 63, 0.5);
+  border-color: color-mix(in srgb, var(--gold) 50%, transparent);
 }
 .tag.neg {
   color: var(--red);
-  border-color: rgba(255, 77, 109, 0.5);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
 }
 .player-money {
   position: relative;
@@ -1016,15 +988,23 @@ h2 {
   border: none;
   padding: 0;
   cursor: pointer;
-  background: var(--group);
-  color: #0a0d1d;
+  background-color: var(--group);
+  /* light text with a dark outline reads on every set color, light or dark */
+  color: var(--text);
+  text-shadow:
+    0 0 2px var(--ink),
+    0 0 3px var(--ink),
+    0 1px 1px var(--ink);
   font-size: 10px;
   font-weight: 700;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--group) 40%, transparent);
 }
 .holding.mortgaged {
   opacity: 0.35;
   background: repeating-linear-gradient(135deg, var(--group) 0 3px, transparent 3px 6px);
+}
+/* With shape cues the set pattern replaces the mortgage stripes, so keep the fill. */
+:root[data-cues] .holding {
+  background-color: var(--group);
 }
 .toolbar {
   display: flex;
@@ -1055,7 +1035,7 @@ h2 {
   padding: 3px 0 3px 9px;
   margin: 3px 0;
   border-left: 2px solid var(--c);
-  color: #c4cae6;
+  color: var(--text-2);
 }
 .log::-webkit-scrollbar {
   width: 6px;
@@ -1074,7 +1054,7 @@ h2 {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(3, 4, 10, 0.68);
+  background: rgba(9, 10, 16, 0.62);
   backdrop-filter: blur(6px);
   animation: fade 0.18s ease-out;
 }
@@ -1087,12 +1067,10 @@ h2 {
   width: min(440px, 100%);
   max-height: calc(100vh - 32px);
   overflow: auto;
-  background: linear-gradient(180deg, #11163a, #0b0f24);
+  background: var(--raised);
   border: 1px solid var(--line2);
   border-radius: 18px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.6),
-    0 0 60px rgba(123, 92, 255, 0.18);
+  box-shadow: 0 30px 80px rgba(5, 6, 12, 0.55);
   animation: pop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .modal.wide {
@@ -1112,7 +1090,7 @@ h2 {
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
-  background: #11163a;
+  background: var(--raised);
   z-index: 1;
 }
 .modal-head h2 {
@@ -1128,13 +1106,13 @@ h2 {
 .notice {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 210, 63, 0.35);
-  background: rgba(255, 210, 63, 0.07);
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
   font-size: 13px;
 }
 .notice.neg {
-  border-color: rgba(255, 77, 109, 0.4);
-  background: rgba(255, 77, 109, 0.08);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .tabs {
   display: flex;
@@ -1154,7 +1132,6 @@ h2 {
   color: var(--text);
   border-color: var(--c);
   background: color-mix(in srgb, var(--c) 12%, transparent);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent);
 }
 
 /* portfolio */
@@ -1184,7 +1161,7 @@ h2 {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--group);
+  color: color-mix(in srgb, var(--group) 75%, var(--text));
   margin-bottom: 4px;
 }
 .swatch {
@@ -1193,15 +1170,15 @@ h2 {
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  background: var(--group);
-  box-shadow: 0 0 8px var(--group);
+  background-color: var(--group);
 }
 .badge {
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: var(--group);
-  color: #0a0d1d;
+  border: 1px solid var(--group);
+  background: color-mix(in srgb, var(--group) 16%, transparent);
+  color: var(--text);
 }
 .pf-row {
   display: flex;
@@ -1215,7 +1192,7 @@ h2 {
   flex-wrap: wrap;
 }
 .pf-row.mortgaged {
-  background: repeating-linear-gradient(135deg, rgba(255, 77, 109, 0.04) 0 8px, transparent 8px 16px);
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--red) 5%, transparent) 0 8px, transparent 8px 16px);
 }
 .pf-name {
   display: flex;
@@ -1298,7 +1275,7 @@ input:not([type]) {
 }
 input:focus {
   border-color: var(--violet);
-  box-shadow: 0 0 0 3px rgba(123, 92, 255, 0.25);
+  box-shadow: 0 0 0 3px var(--focus);
 }
 input[type='checkbox'] {
   accent-color: var(--violet);
@@ -1328,7 +1305,7 @@ input[type='checkbox'] {
 }
 .logo-mark.big {
   font-size: 56px;
-  animation: spin 9s linear infinite;
+  animation: spin 14s linear infinite;
   display: inline-block;
 }
 @keyframes spin {
@@ -1374,9 +1351,8 @@ input[type='checkbox'] {
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
-  background: radial-gradient(circle at 35% 30%, #2c3366, #090c1c 75%);
+  background: radial-gradient(circle at 35% 30%, #363c55, #191c29 75%);
   border: 2px solid var(--c);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--c) 55%, transparent);
 }
 .seg {
   display: flex;
@@ -1394,8 +1370,8 @@ input[type='checkbox'] {
   color: var(--muted);
 }
 .seg button.on {
-  background: var(--grad);
-  color: #fff;
+  background: var(--primary);
+  color: #f3f2fa;
 }
 .setup-legend ul {
   list-style: none;
@@ -1451,27 +1427,18 @@ input[type='checkbox'] {
 .menu-card:hover {
   transform: translateY(-3px);
   border-color: var(--line2);
-  box-shadow: 0 0 50px rgba(123, 92, 255, 0.22);
+  box-shadow: var(--shadow);
 }
 .menu-mark {
   font-size: 54px;
   line-height: 1;
   color: var(--cyan);
-  text-shadow:
-    0 0 16px var(--cyan),
-    0 0 30px var(--magenta);
 }
 .menu-catan .menu-mark {
   color: var(--magenta);
-  text-shadow:
-    0 0 16px var(--magenta),
-    0 0 30px var(--cyan);
 }
 .menu-salem .menu-mark {
   color: var(--gold);
-  text-shadow:
-    0 0 16px var(--gold),
-    0 0 30px var(--violet);
 }
 .menu-title {
   font-size: 26px;
@@ -1501,7 +1468,7 @@ input[type='checkbox'] {
   align-items: center;
   gap: 10px;
   border-color: var(--c);
-  box-shadow: 0 0 80px color-mix(in srgb, var(--c) 40%, transparent);
+  box-shadow: 0 30px 80px rgba(5, 6, 12, 0.55);
 }
 .winner h1 {
   font-size: 34px;
@@ -1530,6 +1497,100 @@ input[type='checkbox'] {
   to {
     transform: translateY(110vh) rotate(540deg);
   }
+}
+
+/* ---------- display settings ---------- */
+
+.corner-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+.toolbar .btn.ds-icon {
+  flex: none;
+  padding-inline: 0.7em;
+}
+.ds-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ds-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds-mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.ds-mode:hover {
+  border-color: var(--line2);
+}
+.ds-mode.on {
+  border-color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 10%, transparent);
+}
+.ds-mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ds-swatches {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+.ds-swatches i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+.ds-swatches .ds-pair {
+  margin-left: 6px;
+}
+.ds-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.ds-toggle input {
+  margin-top: 3px;
+}
+.ds-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ds-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.ds-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.ds-legend-item i {
+  flex: none;
+  width: 22px;
+  height: 14px;
+  border-radius: 3px;
 }
 
 /* ---------- responsive ---------- */

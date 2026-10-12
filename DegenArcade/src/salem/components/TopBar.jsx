@@ -1,6 +1,7 @@
 import { MODES } from '../roles.js'
 import { PACES } from '../engine.js'
 import { fullMoon } from '../rules.js'
+import DisplayButton from '../../components/DisplaySettings.jsx'
 
 const PHASES = {
   day1: '☀️ Introductions',
@@ -63,6 +64,7 @@ export default function TopBar({ state: s, paused, setPaused, onPace, onGuide, o
         <button className="btn tiny ghost" onClick={onMenu}>
           ⌂ Menu
         </button>
+        <DisplayButton icon className="tiny" />
       </div>
     </header>
   )

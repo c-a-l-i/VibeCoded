@@ -10,12 +10,13 @@ import TradeModal from './components/TradeModal.jsx'
 import DevModal from './components/DevModal.jsx'
 import GameOver from './components/GameOver.jsx'
 import './catan.css'
+import { upgradeColors } from '../display.js'
 
 export const SAVE_KEY = 'satoshi-settlers-save-v1'
 
 function loadSave() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY))
+    return upgradeColors(JSON.parse(localStorage.getItem(SAVE_KEY)))
   } catch {
     return null
   }

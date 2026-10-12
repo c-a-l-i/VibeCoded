@@ -3,6 +3,7 @@ import { MODES, NAMES, TERMS, rollRoles } from '../roles.js'
 import { PACES } from '../engine.js'
 import RoleGuide from './RoleGuide.jsx'
 import RoleListPicker from './RoleListPicker.jsx'
+import DisplayButton from '../../components/DisplaySettings.jsx'
 
 const seat = (i) => ({ name: NAMES[i], isAI: i > 0 })
 
@@ -35,6 +36,7 @@ export default function Setup({ onStart, onBack }) {
       <button className="btn ghost back-btn" onClick={onBack}>
         ← All games
       </button>
+      <DisplayButton className="corner-btn" />
       <div className="setup-hero">
         <div className="logo-mark big">⚖️</div>
         <h1 className="logo ts-logo">TOWN OF SOLANA</h1>

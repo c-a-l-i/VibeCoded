@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BOARD, GROUPS, houseCost, mortgageValue, unmortgageCost, spaceColor } from '../data/board.js'
+import { BOARD, GROUPS, houseCost, mortgageValue, unmortgageCost, spaceVars } from '../data/board.js'
 import {
   actingPlayer, canBuild, canSell, canMortgage, canUnmortgage, money, netWorth, ownedBy, ownsGroup,
 } from '../engine/game.js'
@@ -78,7 +78,7 @@ export default function PortfolioModal({ state, act, onClose }) {
           const isSet = GROUPS[key] && ownsGroup(state, viewId, key)
           return (
             <div className="pf-group" key={key}>
-              <div className="pf-group-head" style={{ '--group': spaceColor(ids[0]) }}>
+              <div className="pf-group-head" style={spaceVars(ids[0])}>
                 <span className="swatch" />
                 {GROUPS[key]?.name ?? (key === 'rail' ? 'Networks' : 'Mining')}
                 {isSet && <span className="badge">FULL SET</span>}

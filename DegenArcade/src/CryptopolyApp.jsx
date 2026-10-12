@@ -9,12 +9,13 @@ import DeedModal from './components/DeedModal.jsx'
 import PortfolioModal from './components/PortfolioModal.jsx'
 import TradeModal from './components/TradeModal.jsx'
 import GameOver from './components/GameOver.jsx'
+import { upgradeColors } from './display.js'
 
 export const SAVE_KEY = 'cryptopoly-save-v1'
 
 function loadSave() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY))
+    return upgradeColors(JSON.parse(localStorage.getItem(SAVE_KEY)))
   } catch {
     return null
   }

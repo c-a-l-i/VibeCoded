@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BOARD, spaceColor } from '../data/board.js'
+import { BOARD, spaceVars } from '../data/board.js'
 import { groupHasBuildings, money, ownedBy, tradeCheck } from '../engine/game.js'
 import { aiAcceptsTrade } from '../engine/ai.js'
 import Modal from './Modal.jsx'
@@ -21,7 +21,7 @@ function Side({ state, player, side, setSide, title }) {
           const sp = BOARD[id]
           const locked = sp.type === 'street' && groupHasBuildings(state, sp.group)
           return (
-            <label key={id} className={`trade-prop ${locked ? 'locked' : ''}`} style={{ '--group': spaceColor(id) }} title={locked ? 'Sell buildings in this set first' : ''}>
+            <label key={id} className={`trade-prop ${locked ? 'locked' : ''}`} style={spaceVars(id)} title={locked ? 'Sell buildings in this set first' : ''}>
               <input type="checkbox" disabled={locked} checked={side.props.includes(id)} onChange={() => toggle(id)} />
               <span className="swatch" />
               {sp.name}
