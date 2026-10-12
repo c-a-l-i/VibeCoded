@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import Modal from './Modal.jsx'
 import { GROUPS, groupVars } from '../data/board.js'
 import { VISION, useDisplay, setDisplay } from '../display.js'
@@ -64,7 +65,8 @@ export default function DisplayButton({ className = '', icon = false }) {
       <button className={`btn ghost ${icon ? 'ds-icon' : ''} ${className}`} onClick={() => setOpen(true)} title="Display & color-blind settings" aria-label="Display settings">
         🎨{icon ? '' : ' Display'}
       </button>
-      {open && <DisplayModal onClose={() => setOpen(false)} />}
+      {/* Portaled to <body>: toolbars sit inside blurred panels, which would otherwise trap the fixed modal under later panels. */}
+      {open && createPortal(<DisplayModal onClose={() => setOpen(false)} />, document.body)}
     </>
   )
 }
