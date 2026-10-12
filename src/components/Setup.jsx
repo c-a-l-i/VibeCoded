@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TOKENS, PLAYER_COLORS, DEFAULT_NAMES } from '../data/board.js'
+import DisplayButton from './DisplaySettings.jsx'
 
 const LEGEND = [
   ['⛓️', 'Genesis Block', 'GO — collect $200'],
@@ -49,6 +50,7 @@ export default function Setup({ onStart, onBack }) {
       <button className="btn ghost back-btn" onClick={onBack}>
         ← All games
       </button>
+      <DisplayButton className="corner-btn" />
       <div className="setup-hero">
         <div className="logo-mark big">◈</div>
         <h1 className="logo">CRYPTOPOLY</h1>

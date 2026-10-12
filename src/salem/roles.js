@@ -1,10 +1,11 @@
 // Static data for Town of Solana: roles, role lists and lobby flavor.
 // The rules follow Town of Salem (base game, no Coven); only the names are crypto.
 
+// Faction colors are CSS tokens (src/theme.css) so the Display settings can swap them for color-blind palettes.
 export const FACTIONS = {
-  town: { name: 'Town', color: '#3dff8f', goal: 'Slash every criminal and evildoer.' },
-  cabal: { name: 'Cabal', color: '#ff4d6d', goal: 'Rug everyone who won’t submit to the Cabal.' },
-  neutral: { name: 'Neutral', color: '#a0a8ff' },
+  town: { name: 'Town', color: 'var(--town)', goal: 'Slash every criminal and evildoer.' },
+  cabal: { name: 'Cabal', color: 'var(--cabal)', goal: 'Rug everyone who won’t submit to the Cabal.' },
+  neutral: { name: 'Neutral', color: 'var(--neutral)' },
 }
 
 export const CATS = {
@@ -469,10 +470,7 @@ export const NAMES = [
   'Moonboy', 'Bagholder', 'Lambo', 'Gigabrain', 'Kek', 'Wagmi', 'Anon', 'Rekt', 'Doge', 'Nakamoto',
 ]
 export const AVATARS = ['🐸', '🦍', '🐶', '🦊', '🐼', '🐵', '🦄', '🐙', '🦖', '👽', '🤖', '🧙', '🐲', '🦉', '🐧', '🐻', '🦈', '🐱']
-export const COLORS = [
-  '#00f0ff', '#ff3df2', '#ffd23f', '#3dff8f', '#ff8a3d', '#9d7bff', '#ff4d6d', '#4dd2ff',
-  '#c6ff3d', '#ff9de2', '#a0a8ff', '#3dffd8', '#ffb86b', '#e07bff', '#9dffb0',
-]
+export const COLORS = Array.from({ length: 15 }, (_, i) => `var(--p${i + 1})`)
 
 export const TERMS = [
   ['🔪', 'Rugged', 'Killed at night'],

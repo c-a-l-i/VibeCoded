@@ -89,7 +89,6 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 14px rgba(123, 92, 255, 0.5));
 }
 .on-lobby .on-error {
   width: min(900px, 100%);
@@ -127,12 +126,12 @@
   min-height: 40px;
 }
 .on-seat.human {
-  border-color: rgba(61, 255, 143, 0.35);
-  background: rgba(61, 255, 143, 0.04);
+  border-color: color-mix(in srgb, var(--green) 35%, transparent);
+  background: color-mix(in srgb, var(--green) 4%, transparent);
 }
 .on-seat.mine {
-  border-color: rgba(255, 210, 63, 0.6);
-  background: rgba(255, 210, 63, 0.06);
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
 }
 .on-seat.open {
   border-style: dashed;
@@ -154,7 +153,7 @@
 }
 .on-seat.bot .on-seat-name {
   font-weight: 400;
-  color: #c4cae6;
+  color: var(--text-2);
 }
 .on-seat-actions {
   display: flex;
@@ -203,7 +202,7 @@
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--line2);
-  background: rgba(10, 13, 30, 0.92);
+  background: color-mix(in srgb, var(--panel-solid) 94%, transparent);
   backdrop-filter: blur(10px);
   font-size: 12.5px;
   cursor: pointer;
@@ -215,7 +214,7 @@
   flex-direction: column;
   gap: 6px;
   width: 280px;
-  background: rgba(12, 16, 36, 0.97);
+  background: var(--raised);
 }
 .on-bar-menu p {
   margin: 0;
@@ -229,8 +228,8 @@
   padding: 10px 16px;
   border-radius: 12px;
   border: 1px solid var(--line2);
-  background: rgba(12, 16, 36, 0.95);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: var(--raised);
+  box-shadow: var(--shadow);
   font-size: 13.5px;
   animation: fade-up 0.25s ease-out;
 }

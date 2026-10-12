@@ -1,4 +1,5 @@
 import { GEO, RES, TERRAIN, PIPS } from '../data.js'
+import { useDisplay } from '../../display.js'
 
 const S = 60 // hex size in SVG units
 const pt = (v) => [GEO.vertices[v].x * S, GEO.vertices[v].y * S]
@@ -86,7 +87,8 @@ function Port({ port }) {
   )
 }
 
-function Channel({ e, color, target, onClick }) {
+// `seat` picks a line style and `token` is drawn on buildings, so pieces read without color when shape cues are on.
+function Channel({ e, color, seat, target, onClick }) {
   const { a, b } = GEO.edges[e]
   const [ax, ay] = pt(a)
   const [bx, by] = pt(b)
@@ -100,11 +102,15 @@ function Channel({ e, color, target, onClick }) {
         <line x1={ax} y1={ay} x2={bx} y2={by} className="st-hit" />
       </g>
     )
-  return <line x1={x1} y1={y1} x2={x2} y2={y2} className="st-channel" style={{ '--c': color }} />
+  return <line x1={x1} y1={y1} x2={x2} y2={y2} className={`st-channel seat-${seat}`} style={{ '--c': color }} />
 }
 
-function Building({ v, b, color, upgradable, onClick }) {
+function Building({ v, b, color, token, upgradable, onClick }) {
   const [x, y] = pt(v)
+  // Pieces grow a little with shape cues on so the owner's token inside stays readable.
+  const { cues } = useDisplay()
+  const n = cues ? 11 : 8
+  const d = cues ? 16 : 13
   return (
     <g
       className={`st-building ${b.dc ? 'dc' : 'node'} ${upgradable ? 'upgradable' : ''}`}
@@ -114,12 +120,15 @@ function Building({ v, b, color, upgradable, onClick }) {
     >
       {b.dc ? (
         <>
-          <rect x={-13} y={-13} width={26} height={26} rx={5} />
+          <rect x={-d} y={-d} width={d * 2} height={d * 2} rx={5} />
           <rect x={-5.5} y={-5.5} width={11} height={11} rx={2} className="st-core" />
         </>
       ) : (
-        <rect x={-8} y={-8} width={16} height={16} rx={3} transform="rotate(45)" />
+        <rect x={-n} y={-n} width={n * 2} height={n * 2} rx={3} transform="rotate(45)" />
       )}
+      <text className="st-token" y={1}>
+        {token}
+      </text>
     </g>
   )
 }
@@ -130,14 +139,15 @@ export default function HexBoard({ state, targets, hotNumber }) {
   const ids = new Set(targets?.ids ?? [])
   const pick = (id) => () => targets.onPick(id)
   const colorOf = (pid) => state.players[pid].color
+  const tokenOf = (pid) => state.players[pid].token
 
   return (
     <svg className={`st-svg ${targets ? `picking-${targets.kind}` : ''}`} viewBox="-345 -320 690 640" role="img" aria-label="Game board">
       <defs>
         {Object.entries(TERRAIN).map(([k, t]) => (
-          <radialGradient key={k} id={`st-fill-${k}`} cx="50%" cy="40%" r="70%">
-            <stop offset="0%" stopColor={t.fill[0]} />
-            <stop offset="100%" stopColor={t.fill[1]} />
+          <radialGradient key={k} id={`st-fill-${k}`} cx="50%" cy="40%" r="70%" style={{ '--glow': t.glow }}>
+            <stop offset="0%" className="st-stop-in" />
+            <stop offset="100%" className="st-stop-out" />
           </radialGradient>
         ))}
         <pattern id="st-grid" width="22" height="22" patternUnits="userSpaceOnUse">
@@ -162,7 +172,7 @@ export default function HexBoard({ state, targets, hotNumber }) {
           .map((h) => <polygon key={h.id} points={hexPoints(h)} className="st-target-hex" onClick={pick(h.id)} />)}
 
       {Object.entries(state.channels).map(([e, owner]) => (
-        <Channel key={e} e={Number(e)} color={colorOf(owner)} />
+        <Channel key={e} e={Number(e)} color={colorOf(owner)} seat={owner} />
       ))}
       {targets?.kind === 'edge' && [...ids].map((e) => <Channel key={`t${e}`} e={e} target onClick={pick(e)} />)}
 
@@ -172,6 +182,7 @@ export default function HexBoard({ state, targets, hotNumber }) {
           v={Number(v)}
           b={b}
           color={colorOf(b.owner)}
+          token={tokenOf(b.owner)}
           upgradable={targets?.kind === 'upgrade' && ids.has(Number(v))}
           onClick={pick(Number(v))}
         />

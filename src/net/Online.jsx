@@ -11,6 +11,7 @@ import CryptopolyApp from '../CryptopolyApp.jsx'
 import CatanApp from '../catan/CatanApp.jsx'
 import SalemApp from '../salem/SalemApp.jsx'
 import './online.css'
+import DisplayButton from '../components/DisplaySettings.jsx'
 
 function Status({ n }) {
   if (n.status === 'online' || n.status === 'offline') return null
@@ -67,6 +68,7 @@ function Lobby({ n }) {
       <button className="btn ghost back-btn" onClick={leave}>
         ← Leave room
       </button>
+      <DisplayButton className="corner-btn" />
       <div className="setup-hero">
         <div className="logo-mark big">{game.mark}</div>
         <h1 className="logo on-title">{game.title}</h1>

@@ -58,7 +58,7 @@ function LineView({ s, m, view }) {
     )
   const from = s.players[m.from]
   return (
-    <li className={`ts-msg room-${m.room}`} style={{ '--c': from?.color ?? '#bcd4ff' }}>
+    <li className={`ts-msg room-${m.room}`} style={{ '--c': from?.color ?? 'var(--text-2)' }}>
       {m.room !== 'town' && (
         <span className="ts-room">
           {m.room === 'whisper' ? `🤫 to ${s.players[m.to].name}` : ROOM_NAMES[m.room]}

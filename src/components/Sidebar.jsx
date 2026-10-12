@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { BOARD, OWNABLE, spaceColor } from '../data/board.js'
+import { BOARD, OWNABLE, spaceVars } from '../data/board.js'
 import { money, netWorth } from '../engine/game.js'
+import DisplayButton from './DisplaySettings.jsx'
 
 function PlayerCard({ state, p, openModal }) {
   const prev = useRef(p.money)
@@ -51,7 +52,7 @@ function PlayerCard({ state, p, openModal }) {
             <button
               key={id}
               className={`holding ${state.props[id].mortgaged ? 'mortgaged' : ''}`}
-              style={{ '--group': spaceColor(id) }}
+              style={spaceVars(id)}
               title={BOARD[id].name}
               onClick={() => openModal({ type: 'deed', id })}
             >
@@ -97,6 +98,7 @@ export default function Sidebar({ state, openModal, onQuit, onMenu }) {
         <button className="btn ghost" onClick={onMenu}>
           ⌂ Menu
         </button>
+        <DisplayButton icon />
       </div>
 
       <div className="panel log-panel">

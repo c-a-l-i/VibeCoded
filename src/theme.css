@@ -1,0 +1,125 @@
+/* Degen Arcade color tokens. Every color in the app comes from here so the Display settings can swap them.
+   The categorical palettes (players, Cryptopoly sets, Settlers resources, good/bad) have one block per
+   color-vision mode, picked so each color stays distinct (CIEDE2000 ≥ 13) as that viewer sees it.
+   A block applies to <html data-cvd> for the whole app, or to any element with data-cvd for a preview. */
+
+:root {
+  color-scheme: dark;
+
+  /* surfaces: a soft navy-charcoal instead of near-black, so text doesn't glare */
+  --bg: #141722;
+  --panel: rgba(30, 34, 49, 0.82);
+  --panel-solid: #1d2130;
+  --raised: #222738;
+  --cell: #1b1f2d;
+  --cell-hover: #232839;
+  --line: rgba(180, 190, 230, 0.1);
+  --line2: rgba(180, 190, 230, 0.19);
+  --shadow: 0 12px 32px rgba(5, 6, 12, 0.45);
+
+  /* text */
+  --text: #dcdfe9;
+  --text-2: #b7bccc;
+  --muted: #8b91a7;
+  --ink: #161925; /* dark text on colored fills */
+
+  /* decorative accents (the same in every mode) */
+  --cyan: #74bfd0;
+  --violet: #a097e6;
+  --magenta: #cd93c6;
+  --grad: linear-gradient(120deg, var(--cyan), var(--violet) 55%, var(--magenta));
+  --primary: linear-gradient(135deg, #5662b4, #6f5eae);
+  --primary-hover: linear-gradient(135deg, #606dc0, #7b69ba);
+  --focus: color-mix(in srgb, var(--violet) 45%, transparent);
+
+  /* Cryptopoly card decks and the Settlers desert */
+  --chance: #e3a06a;
+  --chest: var(--cyan);
+  --tax: #e0919c;
+  --desert: #a990a5;
+  --rail: #aab1c4;
+  --utility: #9197ab;
+
+  /* semantic aliases used across the games */
+  --green: var(--good);
+  --red: var(--bad);
+  --gold: var(--warn);
+  --town: var(--good);
+  --cabal: var(--bad);
+
+  /* Shape cues: one texture per Cryptopoly set, drawn over the set color when cues are on */
+  --pat-ink: rgba(12, 14, 22, 0.5);
+  --pat-brown: none;
+  --pat-lightblue: repeating-linear-gradient(0deg, var(--pat-ink) 0 1.5px, transparent 1.5px 5px);
+  --pat-pink: repeating-linear-gradient(45deg, var(--pat-ink) 0 1.5px, transparent 1.5px 6px);
+  --pat-orange: repeating-linear-gradient(90deg, var(--pat-ink) 0 1.5px, transparent 1.5px 5px);
+  --pat-red: repeating-linear-gradient(-45deg, var(--pat-ink) 0 1.5px, transparent 1.5px 6px);
+  --pat-yellow: radial-gradient(circle, var(--pat-ink) 0 1.4px, transparent 1.9px);
+  --pat-green:
+    repeating-linear-gradient(45deg, var(--pat-ink) 0 1.2px, transparent 1.2px 6px),
+    repeating-linear-gradient(-45deg, var(--pat-ink) 0 1.2px, transparent 1.2px 6px);
+  --pat-darkblue:
+    repeating-linear-gradient(0deg, var(--pat-ink) 0 1.2px, transparent 1.2px 5px),
+    repeating-linear-gradient(90deg, var(--pat-ink) 0 1.2px, transparent 1.2px 5px);
+}
+
+/* ---------- standard vision ---------- */
+:root,
+[data-cvd='std'] {
+  --good: #6cc49a;
+  --bad: #e8797f;
+  --neutral: #9fa6ee;
+  --warn: #e2b860;
+  --p1: #4aadc9; --p2: #e791c2; --p3: #d18e35; --p4: #96d987; --p5: #e47d6d; --p6: #aab1f7; --p7: #848f02; --p8: #3a997d;
+  --p9: #e3d09d; --p10: #6ae2d4; --p11: #a074d0; --p12: #4c88d3; --p13: #fac2af; --p14: #8ea071; --p15: #b17a86;
+  --g-brown: #8e6d4f; --g-lightblue: #86c4e6; --g-pink: #e79ad6; --g-orange: #f49851;
+  --g-red: #e26a6c; --g-yellow: #dbcc7e; --g-green: #66b682; --g-darkblue: #5474af;
+  --r-chips: #c87a6d; --r-fiber: #4b9779; --r-memes: #bbe98b; --r-stake: #daa843; --r-hash: #99a7e4;
+}
+
+/* ---------- protanopia (red–green, reds look dark) ---------- */
+[data-cvd='protan'] {
+  --good: #47b5fa;
+  --bad: #cf7b26;
+  --neutral: #af8397;
+  --warn: #cdbd92;
+  --p1: #488acb; --p2: #c8741d; --p3: #d6c390; --p4: #f2c1d3; --p5: #30c0f8; --p6: #ae7e7d; --p7: #dfa635; --p8: #f183a7;
+  --p9: #019f68; --p10: #8fe5ce; --p11: #24b6a1; --p12: #c66897; --p13: #80e1fe; --p14: #d36757; --p15: #cf94c9;
+  --g-brown: #a06522; --g-lightblue: #79a1fc; --g-pink: #cf99ad; --g-orange: #b39f18;
+  --g-red: #98636f; --g-yellow: #dbdd97; --g-green: #419977; --g-darkblue: #7468b0;
+  --r-chips: #cf686b; --r-fiber: #80e1fe; --r-memes: #3ad4aa; --r-stake: #989912; --r-hash: #9483aa;
+}
+
+/* ---------- deuteranopia (red–green, the most common) ---------- */
+[data-cvd='deutan'] {
+  --good: #47b5fa;
+  --bad: #cf7b26;
+  --neutral: #af8397;
+  --warn: #e0d9ac;
+  --p1: #75acd2; --p2: #c5770f; --p3: #dad3a6; --p4: #ca6789; --p5: #9cd7da; --p6: #da8375; --p7: #429595; --p8: #e8aa4e;
+  --p9: #ff8fb4; --p10: #6288e1; --p11: #5bb7ac; --p12: #a8ceff; --p13: #3f9b65; --p14: #2c94b0; --p15: #8c9cfb;
+  --g-brown: #a06604; --g-lightblue: #d3d3fe; --g-pink: #e696ae; --g-orange: #d87a6b;
+  --g-red: #926673; --g-yellow: #fbd094; --g-green: #49a9ae; --g-darkblue: #5c82da;
+  --r-chips: #f5c4b7; --r-fiber: #479e89; --r-memes: #9ddcf1; --r-stake: #b38236; --r-hash: #528ed9;
+}
+
+/* ---------- tritanopia (blue–yellow) ---------- */
+[data-cvd='tritan'] {
+  --good: #40cd9b;
+  --bad: #d96a7e;
+  --neutral: #927fe7;
+  --warn: #e3cfa5;
+  --p1: #c66f76; --p2: #79e4f0; --p3: #b59be6; --p4: #669649; --p5: #cea98b; --p6: #699ef5; --p7: #c2dd94; --p8: #928a07;
+  --p9: #a8b540; --p10: #aa75b6; --p11: #e3c4f1; --p12: #aac6f2; --p13: #7e83d3; --p14: #6ec272; --p15: #f38abe;
+  --g-brown: #648026; --g-lightblue: #398ad6; --g-pink: #e2ccfd; --g-orange: #f4a25c;
+  --g-red: #926673; --g-yellow: #a6be4e; --g-green: #5addc7; --g-darkblue: #997fde;
+  --r-chips: #ab7d8b; --r-fiber: #6e87db; --r-memes: #5addc7; --r-stake: #8a9260; --r-hash: #d9c6fe;
+}
+
+/* ---------- shape cues ---------- */
+/* Patterns on set colors. Elements opt in by setting --pat (and optionally --pat-size) inline. */
+:root[data-cues] :is(.band, .holding, .swatch, .pat),
+.pat {
+  background-image: var(--pat, none);
+  background-size: var(--pat-size, auto);
+}

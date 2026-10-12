@@ -1,16 +1,24 @@
 // The 40 board spaces, laid out exactly like the classic board (index 0 = GO),
 // re-skinned with crypto names. Prices, rents and house costs are the originals.
 
+// Set colors are CSS tokens (src/theme.css) so the Display settings can swap them for color-blind palettes.
 export const GROUPS = {
-  brown: { name: 'Shitcoins', color: '#c2895b', houseCost: 50 },
-  lightblue: { name: 'Testnets', color: '#5ad8ff', houseCost: 50 },
-  pink: { name: 'Memes', color: '#ff4fd8', houseCost: 100 },
-  orange: { name: 'Farms', color: '#ff9a3c', houseCost: 100 },
-  red: { name: 'DeFi', color: '#ff4d6d', houseCost: 150 },
-  yellow: { name: 'Protocols', color: '#ffe14d', houseCost: 150 },
-  green: { name: 'Layer 1s', color: '#3dffa0', houseCost: 200 },
-  darkblue: { name: 'Blue Chips', color: '#6b7bff', houseCost: 200 },
+  brown: { name: 'Shitcoins', color: 'var(--g-brown)', houseCost: 50 },
+  lightblue: { name: 'Testnets', color: 'var(--g-lightblue)', houseCost: 50 },
+  pink: { name: 'Memes', color: 'var(--g-pink)', houseCost: 100 },
+  orange: { name: 'Farms', color: 'var(--g-orange)', houseCost: 100 },
+  red: { name: 'DeFi', color: 'var(--g-red)', houseCost: 150 },
+  yellow: { name: 'Protocols', color: 'var(--g-yellow)', houseCost: 150 },
+  green: { name: 'Layer 1s', color: 'var(--g-green)', houseCost: 200 },
+  darkblue: { name: 'Blue Chips', color: 'var(--g-darkblue)', houseCost: 200 },
 }
+
+// Inline style for anything painted in a set's color: the color plus its shape-cue pattern.
+export const groupVars = (group) => ({
+  '--group': GROUPS[group].color,
+  '--pat': `var(--pat-${group})`,
+  '--pat-size': group === 'yellow' ? '6px 6px' : 'auto',
+})
 
 const street = (name, group, price, rent) => ({ type: 'street', name, group, price, rent })
 const rail = (name, icon) => ({ type: 'rail', name, price: 200, icon })
@@ -77,11 +85,12 @@ export const unmortgageCost = (id) => Math.ceil(mortgageValue(id) * 1.1)
 export const spaceColor = (id) => {
   const s = BOARD[id]
   if (s.type === 'street') return GROUPS[s.group].color
-  if (s.type === 'rail') return '#b8c2d9'
-  if (s.type === 'utility') return '#9aa4bf'
-  return '#ffffff'
+  if (s.type === 'rail') return 'var(--rail)'
+  if (s.type === 'utility') return 'var(--utility)'
+  return 'var(--text)'
 }
+export const spaceVars = (id) => (BOARD[id].type === 'street' ? groupVars(BOARD[id].group) : { '--group': spaceColor(id) })
 
 export const TOKENS = ['🚀', '🐋', '🦍', '💎', '🌕', '🐸', '🐂', '🐻']
-export const PLAYER_COLORS = ['#00f0ff', '#ff3df2', '#ffd23f', '#3dff8f', '#ff7a3d', '#a78bfa']
+export const PLAYER_COLORS = ['var(--p1)', 'var(--p2)', 'var(--p3)', 'var(--p4)', 'var(--p5)', 'var(--p6)']
 export const DEFAULT_NAMES = ['Satoshi', 'Vitalik', 'Degen', 'Whale', 'Ape', 'Paperhands']

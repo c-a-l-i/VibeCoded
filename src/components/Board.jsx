@@ -1,4 +1,4 @@
-import { BOARD, GROUPS } from '../data/board.js'
+import { BOARD, groupVars } from '../data/board.js'
 import { money } from '../engine/game.js'
 
 // Map a board index to its cell in the 11×11 grid, going counter-clockwise from GO (bottom-right).
@@ -31,7 +31,7 @@ function Space({ sp, state, onClick }) {
   const style = {
     gridRow: row,
     gridColumn: col,
-    '--group': sp.group ? GROUPS[sp.group].color : 'transparent',
+    ...(sp.group && groupVars(sp.group)),
     '--owner': owner?.color,
   }
   const cls = [
@@ -67,6 +67,11 @@ function Space({ sp, state, onClick }) {
             {sp.price && <div className="space-price">{money(sp.price)}</div>}
             {sp.type === 'tax' && <div className="space-price">Pay {money(sp.amount)}</div>}
             {owner && <div className="owner-strip" />}
+            {owner && (
+              <span className="owner-token" title={`Owned by ${owner.name}`}>
+                {owner.token}
+              </span>
+            )}
             {pr?.mortgaged && <div className="stamp">MORTGAGED</div>}
           </>
         )}

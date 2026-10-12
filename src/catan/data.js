@@ -3,21 +3,23 @@
 
 export const RESOURCES = ['chips', 'fiber', 'memes', 'stake', 'hash']
 
+// Colors are CSS tokens (src/theme.css) so the Display settings can swap them for color-blind palettes.
 export const RES = {
-  chips: { name: 'Chips', icon: '💾', classic: 'Brick', color: '#ff7a3d' },
-  fiber: { name: 'Fiber', icon: '🔌', classic: 'Lumber', color: '#3dff8f' },
-  memes: { name: 'Memes', icon: '🐸', classic: 'Wool', color: '#b6ff5c' },
-  stake: { name: 'Stake', icon: '🥩', classic: 'Grain', color: '#ffd23f' },
-  hash: { name: 'Hash', icon: '⛏️', classic: 'Ore', color: '#9fb0ff' },
+  chips: { name: 'Chips', icon: '💾', classic: 'Brick', color: 'var(--r-chips)' },
+  fiber: { name: 'Fiber', icon: '🔌', classic: 'Lumber', color: 'var(--r-fiber)' },
+  memes: { name: 'Memes', icon: '🐸', classic: 'Wool', color: 'var(--r-memes)' },
+  stake: { name: 'Stake', icon: '🥩', classic: 'Grain', color: 'var(--r-stake)' },
+  hash: { name: 'Hash', icon: '⛏️', classic: 'Ore', color: 'var(--r-hash)' },
 }
 
+// Each tile is tinted with its glow color; the board mixes the fill from it.
 export const TERRAIN = {
-  chips: { name: 'Fab Lab', fill: ['#4a1d12', '#2a0f0b'], glow: '#ff7a3d' },
-  fiber: { name: 'Fiber Forest', fill: ['#0f3b25', '#071d14'], glow: '#3dff8f' },
-  memes: { name: 'Meme Farm', fill: ['#2c4012', '#151f09'], glow: '#b6ff5c' },
-  stake: { name: 'Staking Fields', fill: ['#4a3b0c', '#241c06'], glow: '#ffd23f' },
-  hash: { name: 'Mining Peaks', fill: ['#22285a', '#10132e'], glow: '#9fb0ff' },
-  desert: { name: 'Bear Market', fill: ['#2a1a2e', '#140c17'], glow: '#ff3df2', icon: '🐻' },
+  chips: { name: 'Fab Lab', glow: RES.chips.color },
+  fiber: { name: 'Fiber Forest', glow: RES.fiber.color },
+  memes: { name: 'Meme Farm', glow: RES.memes.color },
+  stake: { name: 'Staking Fields', glow: RES.stake.color },
+  hash: { name: 'Mining Peaks', glow: RES.hash.color },
+  desert: { name: 'Bear Market', glow: 'var(--desert)', icon: '🐻' },
 }
 
 export const COSTS = {
@@ -173,7 +175,7 @@ export function randomBoard() {
 }
 
 export const TOKENS = ['🚀', '🐋', '🦍', '💎', '🌕', '🐸', '🐂', '🐻']
-export const PLAYER_COLORS = ['#00f0ff', '#ff3df2', '#ffd23f', '#3dff8f']
+export const PLAYER_COLORS = ['var(--p1)', 'var(--p2)', 'var(--p3)', 'var(--p4)']
 export const DEFAULT_NAMES = ['Satoshi', 'Vitalik', 'Degen', 'Whale']
 
 export const bagSize = (bag) => RESOURCES.reduce((t, r) => t + (bag[r] ?? 0), 0)

@@ -11,12 +11,13 @@ import Curtain from './components/Curtain.jsx'
 import RoleGuide from './components/RoleGuide.jsx'
 import DeadModal from './components/DeadModal.jsx'
 import './salem.css'
+import { upgradeColors } from '../display.js'
 
 export const SAVE_KEY = 'town-of-solana-save-v1'
 
 function loadSave() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY))
+    return upgradeColors(JSON.parse(localStorage.getItem(SAVE_KEY)))
   } catch {
     return null
   }

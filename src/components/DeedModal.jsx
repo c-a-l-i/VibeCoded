@@ -1,4 +1,4 @@
-import { BOARD, GROUPS, RAIL_RENT, houseCost, mortgageValue, spaceColor } from '../data/board.js'
+import { BOARD, GROUPS, RAIL_RENT, houseCost, mortgageValue, spaceVars } from '../data/board.js'
 import { DECKS } from '../data/cards.js'
 import { money } from '../engine/game.js'
 import Modal from './Modal.jsx'
@@ -20,7 +20,7 @@ export function DeedCard({ state, id, compact }) {
     ]
 
   return (
-    <div className={`deed ${compact ? 'compact' : ''} ${pr?.mortgaged ? 'mortgaged' : ''}`} style={{ '--group': spaceColor(id) }}>
+    <div className={`deed ${compact ? 'compact' : ''} ${pr?.mortgaged ? 'mortgaged' : ''}`} style={spaceVars(id)}>
       <div className="deed-head">
         <span className="eyebrow">{sp.type === 'street' ? `${GROUPS[sp.group].name} · title deed` : sp.type === 'rail' ? 'Network' : 'Mining utility'}</span>
         <strong>

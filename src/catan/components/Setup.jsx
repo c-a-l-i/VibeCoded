@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TOKENS, PLAYER_COLORS, DEFAULT_NAMES, RES, RESOURCES, TERRAIN } from '../data.js'
+import DisplayButton from '../../components/DisplaySettings.jsx'
 
 const LEGEND = [
   ['⚡', 'Channel', 'Road'],
@@ -48,6 +49,7 @@ export default function Setup({ onStart, onBack }) {
       <button className="btn ghost back-btn" onClick={onBack}>
         ← All games
       </button>
+      <DisplayButton className="corner-btn" />
       <div className="setup-hero">
         <div className="logo-mark big">⬡</div>
         <h1 className="logo st-logo">SETTLERS OF SATOSHI</h1>

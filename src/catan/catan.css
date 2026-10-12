@@ -17,14 +17,12 @@
 .st-board {
   position: relative;
   border-radius: 18px;
-  background: radial-gradient(ellipse at 50% 45%, #12163a 0%, #070a17 70%);
+  background: radial-gradient(ellipse at 50% 45%, #20243a 0%, var(--bg) 70%);
   box-shadow:
-    0 0 0 1px rgba(150, 170, 255, 0.25),
-    0 0 0 6px rgba(10, 13, 30, 0.9),
-    0 0 0 7px rgba(150, 170, 255, 0.18),
-    0 0 90px rgba(0, 240, 255, 0.12),
-    0 0 180px rgba(255, 61, 242, 0.1),
-    0 30px 80px rgba(0, 0, 0, 0.6);
+    0 0 0 1px var(--line2),
+    0 0 0 6px var(--panel-solid),
+    0 0 0 7px var(--line),
+    0 24px 60px rgba(5, 6, 12, 0.5);
   overflow: hidden;
 }
 .st-svg {
@@ -37,23 +35,30 @@
 }
 
 .st-sea {
-  fill: #060918;
-  stroke: rgba(0, 240, 255, 0.35);
+  fill: #171a27;
+  stroke: color-mix(in srgb, var(--cyan) 30%, transparent);
   stroke-width: 2;
-  filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.25));
 }
 .st-grid-line {
   fill: none;
-  stroke: rgba(130, 150, 255, 0.07);
+  stroke: rgba(180, 190, 230, 0.05);
   stroke-width: 1;
 }
 
+/* tile fills are mixed from the resource color so they follow the Display palette */
+.st-stop-in {
+  stop-color: color-mix(in srgb, var(--glow) 30%, #1d2030);
+}
+.st-stop-out {
+  stop-color: color-mix(in srgb, var(--glow) 13%, #161925);
+}
 .st-tile-hex {
   stroke: var(--glow);
   stroke-width: 1.6;
-  stroke-opacity: 0.75;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--glow) 45%, transparent));
-  transition: filter 0.3s;
+  stroke-opacity: 0.6;
+  transition:
+    stroke-width 0.3s,
+    stroke-opacity 0.3s;
 }
 .st-tile-inner {
   fill: none;
@@ -63,14 +68,13 @@
   stroke-dasharray: 3 4;
 }
 .st-tile.hot .st-tile-hex {
-  stroke-width: 3;
+  stroke-width: 3.5;
   stroke-opacity: 1;
-  filter: drop-shadow(0 0 16px var(--glow));
   animation: st-pulse 1.2s ease-in-out 2;
 }
 @keyframes st-pulse {
   50% {
-    filter: drop-shadow(0 0 28px var(--glow)) brightness(1.4);
+    filter: brightness(1.18);
   }
 }
 .st-tile text {
@@ -80,19 +84,18 @@
 }
 .st-tile-icon {
   font-size: 24px;
-  filter: drop-shadow(0 0 8px var(--glow));
 }
 .st-tile-name {
   font-size: 7.5px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  fill: color-mix(in srgb, var(--glow) 75%, white);
-  opacity: 0.75;
+  fill: color-mix(in srgb, var(--glow) 70%, var(--text));
+  opacity: 0.8;
 }
 .st-num circle:first-child {
-  fill: #0a0d1d;
-  stroke: rgba(232, 236, 255, 0.55);
+  fill: var(--ink);
+  stroke: color-mix(in srgb, var(--text) 45%, transparent);
   stroke-width: 1.2;
 }
 .st-num text {
@@ -106,18 +109,17 @@
 }
 .st-num.red circle:first-child {
   stroke: var(--magenta);
-  filter: drop-shadow(0 0 6px var(--magenta));
+  stroke-width: 2;
 }
 .st-num.red text,
 .st-num.red .st-pip {
-  fill: #ff7af5;
+  fill: var(--magenta);
 }
 
 .st-hacker circle {
-  fill: rgba(10, 4, 18, 0.9);
+  fill: color-mix(in srgb, var(--ink) 92%, transparent);
   stroke: var(--red);
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 10px var(--red));
 }
 .st-hacker text {
   font-size: 20px;
@@ -147,10 +149,9 @@
   stroke-opacity: 0.7;
 }
 .st-port circle {
-  fill: #0b0f24;
+  fill: var(--panel-solid);
   stroke: var(--pc);
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--pc) 70%, transparent));
 }
 .st-port text {
   text-anchor: middle;
@@ -174,18 +175,46 @@
   stroke: var(--c);
   stroke-width: 7;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 5px var(--c));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 .st-building rect {
   fill: var(--c);
-  stroke: #fff;
+  stroke: var(--text);
   stroke-width: 1.8;
-  filter: drop-shadow(0 0 7px var(--c)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
 }
 .st-building .st-core {
-  fill: #0a0d1d;
+  fill: var(--ink);
   stroke: none;
   filter: none;
+}
+.st-token {
+  display: none;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 13px;
+  pointer-events: none;
+}
+.st-building.dc .st-token {
+  font-size: 19px;
+}
+/* Shape cues: each seat gets its own line style and pieces show the owner's token. */
+:root[data-cues] .st-token {
+  display: inline;
+}
+:root[data-cues] .st-building.dc .st-core {
+  display: none;
+}
+:root[data-cues] .st-channel.seat-1 {
+  stroke-dasharray: 12 5;
+  stroke-linecap: butt;
+}
+:root[data-cues] .st-channel.seat-2 {
+  stroke-dasharray: 0.1 10;
+}
+:root[data-cues] .st-channel.seat-3 {
+  stroke-dasharray: 9 4 2 4;
+  stroke-linecap: butt;
 }
 .st-building.upgradable {
   cursor: pointer;
@@ -209,12 +238,11 @@
   cursor: pointer;
 }
 .st-target-dot {
-  fill: #fff;
+  fill: var(--text);
   stroke: var(--cyan);
   stroke-width: 3.5;
-  filter: drop-shadow(0 0 6px var(--cyan)) drop-shadow(0 0 12px var(--cyan));
   pointer-events: none;
-  animation: st-blink 1.1s ease-in-out infinite;
+  animation: st-blink 1.8s ease-in-out infinite;
 }
 .st-target-vertex:hover .st-target-dot {
   fill: var(--cyan);
@@ -225,9 +253,8 @@
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dasharray: 2 6;
-  filter: drop-shadow(0 0 6px var(--cyan));
   pointer-events: none;
-  animation: st-blink 1.1s ease-in-out infinite;
+  animation: st-blink 1.8s ease-in-out infinite;
 }
 .st-target-edge:hover .st-target-line {
   stroke-dasharray: none;
@@ -235,13 +262,13 @@
   animation: none;
 }
 .st-target-hex {
-  fill: rgba(255, 77, 109, 0);
+  fill: transparent;
   stroke: transparent;
   cursor: pointer;
   transition: fill 0.15s;
 }
 .st-target-hex:hover {
-  fill: rgba(255, 77, 109, 0.22);
+  fill: color-mix(in srgb, var(--red) 22%, transparent);
   stroke: var(--red);
   stroke-width: 2;
 }
@@ -251,7 +278,7 @@
 }
 @keyframes st-blink {
   50% {
-    opacity: 0.5;
+    opacity: 0.6;
   }
 }
 
@@ -284,7 +311,6 @@
 .st-roll.neg {
   background: none;
   color: var(--red);
-  text-shadow: 0 0 14px var(--red);
 }
 .st-console-body {
   flex: 1;
@@ -309,8 +335,7 @@
 }
 .st-build.on {
   border-color: var(--cyan);
-  background: rgba(0, 240, 255, 0.12);
-  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
 }
 .st-cost {
   font-size: 12px;
@@ -336,7 +361,7 @@
 }
 .st-pick.on {
   border-color: var(--rc);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 35%, transparent);
+  background: color-mix(in srgb, var(--rc) 10%, transparent);
 }
 .st-pick-icon {
   font-size: 20px;
@@ -393,13 +418,11 @@
   padding: 8px 2px 6px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--rc) 16%, transparent), transparent 70%);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 18%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rc) 14%, transparent), transparent 70%);
   transition: opacity 0.2s;
 }
 .st-card.empty {
   opacity: 0.35;
-  box-shadow: none;
 }
 .st-card-icon {
   font-size: 20px;
@@ -422,7 +445,7 @@
 }
 .st-devs .chip {
   color: var(--text);
-  border-color: rgba(123, 92, 255, 0.5);
+  border-color: color-mix(in srgb, var(--violet) 50%, transparent);
 }
 .st-devs .chip.fresh {
   opacity: 0.55;
@@ -445,7 +468,6 @@
 .st-res-btn.on {
   border-color: var(--rc);
   background: color-mix(in srgb, var(--rc) 14%, transparent);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 40%, transparent);
 }
 .st-swap,
 .st-otc {
@@ -477,8 +499,8 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(123, 92, 255, 0.4);
-  background: linear-gradient(150deg, rgba(123, 92, 255, 0.1), transparent);
+  border: 1px solid color-mix(in srgb, var(--violet) 40%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--violet) 10%, transparent), transparent);
 }
 .st-dev-head {
   display: flex;
