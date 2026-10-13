@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { money, netWorth } from '../engine/game.js'
+import { netWorth } from '../engine/game.js'
+import { t, tx, money } from '../i18n/index.js'
 
 const BITS = ['🚀', '💎', '🌕', '🪙', '✨', '📈']
 
@@ -24,13 +25,11 @@ export default function GameOver({ state, onNew }) {
       ))}
       <div className="modal winner" style={{ '--c': w.color }}>
         <div className="winner-token">{w.token}</div>
-        <span className="eyebrow">Last whale standing</span>
-        <h1>{w.name} wins!</h1>
-        <p className="muted">
-          Final net worth <b className="mono">{money(netWorth(state, w.id))}</b> after {state.turn} turn{state.turn === 1 ? '' : 's'}.
-        </p>
+        <span className="eyebrow">{t('mono.lastWhale')}</span>
+        <h1>{t('ui.wins', { p: w.name })}</h1>
+        <p className="muted">{tx('mono.finalWorth', { m: money(netWorth(state, w.id)), n: state.turn })}</p>
         <button className="btn primary big" onClick={onNew}>
-          Play again
+          {t('ui.playAgain')}
         </button>
       </div>
     </div>

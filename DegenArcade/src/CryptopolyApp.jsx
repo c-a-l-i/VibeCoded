@@ -10,6 +10,7 @@ import PortfolioModal from './components/PortfolioModal.jsx'
 import TradeModal from './components/TradeModal.jsx'
 import GameOver from './components/GameOver.jsx'
 import { upgradeColors } from './display.js'
+import { t } from './i18n/index.js'
 
 export const SAVE_KEY = 'cryptopoly-save-v1'
 
@@ -55,8 +56,8 @@ export default function CryptopolyApp({ onMenu, net = null }) {
   // Token movement, one space per tick.
   useEffect(() => {
     if (net || state?.phase !== 'moving') return
-    const t = setTimeout(() => dispatch({ type: 'STEP' }), state.moving.steps > 8 ? 85 : 190)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => dispatch({ type: 'STEP' }), state.moving.steps > 8 ? 85 : 190)
+    return () => clearTimeout(timer)
   }, [state, net, dispatch])
 
   // Bots take their actions with a little human-like delay.
@@ -64,19 +65,19 @@ export default function CryptopolyApp({ onMenu, net = null }) {
   useEffect(() => {
     if (net || !state || !actor?.isAI || rolling || ['moving', 'gameover'].includes(state.phase)) return
     const delay = { card: 1800, auction: 650, buy: 1100 }[state.phase] ?? 850
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const a = aiAction(state)
       if (a) act(a)
     }, delay)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [state, actor, rolling, act, net])
 
-  if (!state && net) return <p className="setup tagline">Loading the game…</p>
+  if (!state && net) return <p className="setup tagline">{t('ui.loading')}</p>
   if (!state) return <Setup onStart={(players) => dispatch({ type: 'NEW_GAME', players })} onBack={onMenu} />
 
   const quit = () => {
     if (net) return net.toLobby()
-    if (state.phase === 'gameover' || confirm('Abandon this game and start a new one?')) {
+    if (state.phase === 'gameover' || confirm(t('ui.abandon'))) {
       setModal(null)
       dispatch({ type: 'QUIT' })
     }

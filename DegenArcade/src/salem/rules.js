@@ -1,5 +1,5 @@
 // Core rules for Town of Solana: queries shared by the engine, the bots and the UI, plus night resolution.
-import { ROLES, teamOf, invGroup, groupText, TEAM_NAMES } from './roles.js'
+import { ROLES, teamOf, invGroup } from './roles.js'
 
 export const R = (p) => ROLES[p.role]
 export const living = (s) => s.players.filter((p) => p.alive)
@@ -26,8 +26,9 @@ export function tally(s) {
 export function post(s, msg) {
   s.chat.push({ id: s.nextId++, day: s.day, night: s.phase === 'night', ...msg })
 }
-export const sys = (s, text, extra = {}) => post(s, { room: 'system', text, ...extra })
-export const tell = (s, pid, text, tone = 'info') => post(s, { room: 'private', to: pid, text, tone })
+// Engine messages are keys (salem.msg.*) plus params, so every screen shows them in its own language.
+export const sys = (s, k, v = {}, extra = {}) => post(s, { room: 'system', k, v, ...extra })
+export const tell = (s, pid, k, v = {}, tone = 'info') => post(s, { room: 'private', to: pid, k, v, tone })
 
 // Which chat rooms a player can read right now. `viewer` is a player id, or 'all' for spectators.
 export function canSee(s, m, viewer) {
@@ -90,18 +91,19 @@ export function nightInfo(s, pid) {
   const p = s.players[pid]
   const r = R(p)
   const act = r.act
-  const no = (reason) => ({ can: false, reason, act, slots: 0, targets: [] })
+  // The reason is a message key (salem.why.*) for the UI to translate.
+  const no = (k, v) => ({ can: false, reason: { k, v }, act, slots: 0, targets: [] })
   if (p.role === 'jester') {
-    if (s.haunt?.jester !== pid) return no('You have no night ability.')
+    if (s.haunt?.jester !== pid) return no('noAbility')
     return { can: true, act, slots: 1, targets: [s.haunt.voters.filter((v) => s.players[v].alive)] }
   }
-  if (!p.alive) return no('You are dead.')
-  if (s.jail?.prisoner === pid) return no('You are locked in Cold Storage tonight.')
-  if (!act || ['jail', 'reveal', 'seance'].includes(act.pick)) return no('You have no night ability.')
+  if (!p.alive) return no('dead')
+  if (s.jail?.prisoner === pid) return no('jailed')
+  if (!act || ['jail', 'reveal', 'seance'].includes(act.pick)) return no('noAbility')
   const key = useKey[p.role]
-  if (key && p.uses[key] <= 0) return no('You have no uses left.')
-  if (act.from && s.day < act.from) return no(`You can’t act until Night ${act.from}.`)
-  if (act.fullMoon && !fullMoon(s)) return no('You can only rampage on full-moon nights.')
+  if (key && p.uses[key] <= 0) return no('noUses')
+  if (act.from && s.day < act.from) return no('notUntil', { n: act.from })
+  if (act.fullMoon && !fullMoon(s)) return no('fullMoon')
 
   const live = living(s)
   const others = live.filter((x) => x.id !== pid).map((x) => x.id)
@@ -127,16 +129,16 @@ export function nightInfo(s, pid) {
       return { can: true, act, slots: 2, targets: [live.filter((x) => isCabal(x)).map((x) => x.id), outside] }
     case 'dead': {
       const list = s.graveyard.filter((g) => !s.players[g.pid].alive && !ROLES[g.role ?? s.players[g.pid].role].unique).map((g) => g.pid)
-      return list.length ? { can: true, act, slots: 1, targets: [list] } : no('Nobody suitable is in the Burn Address yet.')
+      return list.length ? { can: true, act, slots: 1, targets: [list] } : no('noneDead')
     }
     case 'deadTown': {
       const list = s.graveyard
         .filter((g) => !s.players[g.pid].alive && g.role && ROLES[g.role].faction === 'town' && !g.cleaned)
         .map((g) => g.pid)
-      return list.length ? { can: true, act, slots: 1, targets: [list] } : no('No dead Town member to revive.')
+      return list.length ? { can: true, act, slots: 1, targets: [list] } : no('noDeadTown')
     }
     default:
-      return no('You have no night ability.')
+      return no('noAbility')
   }
 }
 
@@ -180,9 +182,8 @@ export function resolveNight(s) {
   const wasAlive = new Set(P.filter((p) => p.alive).map((p) => p.id))
   const role = (pid) => P[pid].role
   const notes = {}
-  const note = (pid, text, tone = 'info') => (notes[pid] ??= []).push({ text, tone })
+  const note = (pid, k, v = {}, tone = 'info') => (notes[pid] ??= []).push({ k, v, tone })
   const rec = (pid, r) => P[pid].memo.results.push({ night: N, ...r })
-  const nm = (pid) => P[pid].name
 
   const jail = s.jail && wasAlive.has(s.jail.jailor) && wasAlive.has(s.jail.prisoner) ? s.jail : null
   const jailed = jail ? jail.prisoner : null
@@ -192,7 +193,7 @@ export function resolveNight(s) {
   for (const p of P) {
     const a = s.actions[p.id]
     if (!a || p.id === jailed || !validAction(s, p.id, a)) continue
-    acts[p.id] = { t: [...(a.t ?? [])], ignite: !!a.ignite, forgeRole: a.forgeRole, forgeWill: a.forgeWill }
+    acts[p.id] = { t: [...(a.t ?? [])], ignite: !!a.ignite, forgeRole: a.forgeRole, forgeWill: a.forgeWill, forgeWillTr: a.forgeWillTr }
   }
   for (const [k, a] of Object.entries(acts)) if (DID.has(role(Number(k))) && a.t.length) rec(Number(k), { kind: 'did', target: a.t[0] })
   // A guilty White Hat skips their shot and dies instead.
@@ -208,7 +209,7 @@ export function resolveNight(s) {
   const visits = []
   const visit = (from, to) => {
     if (to === jailed && from !== to) {
-      note(from, 'Your target was in Cold Storage, so you couldn’t reach them.')
+      note(from, 'jailBlocked')
       return false
     }
     if (from !== to) visits.push({ from, to })
@@ -220,7 +221,7 @@ export function resolveNight(s) {
   for (const t of ofRole('transporter')) {
     const [a, b] = acts[t].t
     if (a === jailed || b === jailed) {
-      note(t, 'One of your targets was in Cold Storage, so the mix failed.')
+      note(t, 'mixFailed')
       continue
     }
     if (a !== t) visits.push({ from: t, to: a })
@@ -230,8 +231,8 @@ export function resolveNight(s) {
       const y = prev(x)
       return y === a ? b : y === b ? a : y
     }
-    note(a, 'You were mixed — tonight you swapped places with someone.')
-    note(b, 'You were mixed — tonight you swapped places with someone.')
+    note(a, 'mixed')
+    note(b, 'mixed')
   }
   for (const [k, a] of Object.entries(acts)) {
     const pid = Number(k)
@@ -246,12 +247,12 @@ export function resolveNight(s) {
     const X = P[x]
     rec(w, { kind: 'role', target: x, value: X.role })
     P[w].memo.known[x] = X.role
-    note(w, `Your victim is the ${R(X).name}.`)
+    note(w, 'victimRole', { role: X.role })
     if (R(X).controlImmune) {
-      note(w, 'Your victim couldn’t be phished.')
+      note(w, 'phishImmune')
       continue
     }
-    note(x, 'A Phisher hijacked your wallet tonight — you were controlled!', 'bad')
+    note(x, 'phished', {}, 'bad')
     const forced = acts[x] ?? (nightInfo(s, x).slots > 0 ? { t: [] } : null)
     if (!forced || nightInfo(s, x).slots === 0) continue
     if (X.role === 'disguiser') forced.t = [forced.t[0] ?? x, y]
@@ -268,17 +269,17 @@ export function resolveNight(s) {
     if (!visit(e, x)) continue
     const X = P[x]
     if (R(X).rbImmune || X.role === 'witch') {
-      note(x, 'Someone tried to distract you, but you were immune.')
+      note(x, 'rbImmune')
       continue
     }
     if (X.role === 'serialKiller' || (X.role === 'werewolf' && moon && acts[x])) {
       acts[x] = { t: [e] }
-      note(x, 'Someone tried to distract you, so you went after them instead.')
+      note(x, 'rbAttack')
       continue
     }
     blocked.add(x)
     delete acts[x]
-    note(x, 'Someone kept you busy all night — you were roleblocked!', 'bad')
+    note(x, 'roleblocked', {}, 'bad')
   }
 
   // 4. The Cabal's kill: the Rug Puller carries out the VC's order, or the VC does it himself.
@@ -291,7 +292,7 @@ export function resolveNight(s) {
   if (active(maf) && (acts[maf.id] || order !== null)) {
     killer = maf.id
     kill = acts[maf.id]?.controlled ? acts[maf.id].t[0] : (order ?? acts[maf.id].t[0])
-    if (order !== null && !acts[maf.id]?.controlled) note(maf.id, `The VC ordered you to rug ${nm(order)}.`)
+    if (order !== null && !acts[maf.id]?.controlled) note(maf.id, 'vcOrder', { p: order })
   } else if (order !== null) {
     killer = gf.id
     kill = order
@@ -323,12 +324,12 @@ export function resolveNight(s) {
       case 'veteran':
         alerts.add(pid)
         p.uses.alerts--
-        note(pid, 'You armed your honeypot. Anyone who visits tonight gets caught.')
+        note(pid, 'armed')
         break
       case 'survivor':
         extraDef[pid] = 1
         p.uses.vests--
-        note(pid, 'You moved everything into a cold wallet for the night.')
+        note(pid, 'coldWallet')
         break
       case 'bodyguard':
         if (t === pid) {
@@ -340,7 +341,7 @@ export function resolveNight(s) {
         if (t === pid) {
           p.uses.selfHeal--
           ;(heals[pid] ??= []).push(pid)
-        } else if (P[t].revealed) note(pid, 'A revealed Whale can’t be patched.')
+        } else if (P[t].revealed) note(pid, 'whaleNoPatch')
         else if (visit(pid, t)) (heals[t] ??= []).push(pid)
         break
       case 'sheriff':
@@ -363,7 +364,7 @@ export function resolveNight(s) {
         if (visit(pid, a.t[1])) disguise[a.t[0]] = a.t[1]
         break
       case 'forger':
-        if (visit(pid, t)) forge[t] = { by: pid, role: a.forgeRole ?? 'jester', will: a.forgeWill ?? '' }
+        if (visit(pid, t)) forge[t] = { by: pid, role: a.forgeRole ?? 'jester', will: a.forgeWill ?? '', willTr: a.forgeWillTr ?? null }
         break
       case 'janitor':
         if (visit(pid, t)) clean[t] = pid
@@ -430,11 +431,11 @@ export function resolveNight(s) {
   if (jail && jail.execute && N >= 2 && P[jail.jailor].uses.executions > 0) atk(jail.jailor, jail.prisoner, 3, 'jail')
   for (const a of ignite) {
     for (const [d] of Object.entries(s.doused)) if (wasAlive.has(Number(d)) && Number(d) !== a) atk(a, Number(d), 3, 'arso')
-    note(a, 'You triggered every approval you planted. Drain them all.')
+    note(a, 'drainAll')
   }
   for (const t of douse) {
     s.doused[t] = true
-    note(t, 'You found a weird token approval in your wallet — a Drainer doused you.', 'bad')
+    note(t, 'doused', {}, 'bad')
   }
 
   // Firewalls step in front of direct attacks.
@@ -444,7 +445,7 @@ export function resolveNight(s) {
     const g = (guards[a.to] ?? []).find((b) => !usedBg.has(b) && b !== a.from)
     if (g === undefined) continue
     usedBg.add(g)
-    note(a.to, 'You were attacked, but a Firewall stepped in to protect you!', 'good')
+    note(a.to, 'guarded', {}, 'good')
     a.to = g
     a.guarded = true
     atk(g, a.from, 2, 'bg')
@@ -465,7 +466,7 @@ export function resolveNight(s) {
     const healers = heals[a.to] ?? []
     const eff = healers.length ? Math.max(def, 2) : def
     ;(attackedBy[a.to] ??= []).push(a)
-    for (const d of healers) note(d, 'Your target was attacked last night!')
+    for (const d of healers) note(d, 'targetAttacked')
     if (a.level > eff) {
       if (!dead.has(a.to)) dead.set(a.to, [])
       dead.get(a.to).push(a)
@@ -473,11 +474,11 @@ export function resolveNight(s) {
     }
     if (barrier) {
       T.barrier = false
-      note(a.to, 'Someone attacked you, but your barrier absorbed it. It’s gone now.', 'good')
-    } else if (healers.length && a.level > def) note(a.to, 'You were attacked, but a Core Dev patched you up!', 'good')
-    else note(a.to, 'Someone attacked you, but your defense was too strong!', 'good')
+      note(a.to, 'barrier', {}, 'good')
+    } else if (healers.length && a.level > def) note(a.to, 'patched', {}, 'good')
+    else note(a.to, 'tooStrong', {}, 'good')
     if (DIRECT.has(a.cause) && a.from !== a.to) {
-      note(a.from, 'Your target’s defense was too strong to kill.')
+      note(a.from, 'targetTooStrong')
       // Killers remember who survived them; the whole Cabal shares that.
       const team = a.cause === 'cabal' ? P.filter((p) => isCabal(p)) : [P[a.from]]
       for (const p of team) p.memo.results.push({ night: N, kind: 'failed', target: a.to })
@@ -491,9 +492,9 @@ export function resolveNight(s) {
     const def = Math.max(extraDef[bite.to] ?? 0, alerts.has(bite.to) ? 1 : 0, (heals[bite.to] ?? []).length ? 2 : 0)
     if (def === 0 && !(guards[bite.to] ?? []).length) {
       becomeRole(s, T, 'vampire')
-      note(bite.to, '🧛 You were orange-pilled! You are now a Maxi. Help your fellow Maxis win.', 'bad')
-      post(s, { room: 'vamp', from: null, text: `🧡 ${T.name} has been orange-pilled and joined the Maxis.` })
-    } else note(bite.from, 'Your target resisted the orange pill.')
+      note(bite.to, 'bitten', {}, 'bad')
+      post(s, { room: 'vamp', from: null, k: 'orangePilled', v: { p: T.id } })
+    } else note(bite.from, 'resisted')
   }
 
   // 6. Investigations.
@@ -502,31 +503,31 @@ export function resolveNight(s) {
     switch (r) {
       case 'sheriff': {
         const sus = !!s.framed[t] || (isCabal(T) && !R(T).detectImmune) || T.role === 'serialKiller' || (T.role === 'werewolf' && moon)
-        note(pid, sus ? `🚩 ${T.name} failed the audit — your target is Suspicious!` : `✅ ${T.name} passed the audit. No red flags.`, sus ? 'bad' : 'good')
+        note(pid, sus ? 'sus' : 'clean', { p: t }, sus ? 'bad' : 'good')
         rec(pid, { kind: sus ? 'sus' : 'inno', target: t })
         break
       }
       case 'investigator': {
         const g = s.framed[t] ? invGroup('framer') : invGroup(disguise[t] !== undefined ? role(disguise[t]) : T.role)
-        note(pid, `🔍 ${T.name} could be: ${groupText(g)}.`)
+        note(pid, 'couldBe', { p: t, inv: g })
         rec(pid, { kind: 'group', target: t, value: g })
         break
       }
       case 'consigliere':
-        note(pid, `🤫 ${T.name} is the ${R(T).name}.`)
+        note(pid, 'isRole', { p: t, role: T.role })
         rec(pid, { kind: 'role', target: t, value: T.role })
         P[pid].memo.known[t] = T.role
-        post(s, { room: 'cabal', from: null, text: `🤫 Insider intel: ${T.name} is the ${R(T).name}.` })
+        post(s, { room: 'cabal', from: null, k: 'intel', v: { p: t, role: T.role } })
         for (const c of P) if (c.alive && isCabal(c)) c.memo.known[t] = T.role
         break
       case 'lookout': {
         const seen = [...new Set(visits.filter((v) => v.to === t && v.from !== pid).map((v) => disguise[v.from] ?? v.from))]
-        note(pid, seen.length ? `👁️ ${seen.map(nm).join(', ')} visited ${T.name}.` : `👁️ Nobody visited ${T.name}.`)
+        note(pid, seen.length ? 'visitedBy' : 'noVisitors', { ps: seen, p: t })
         rec(pid, { kind: 'visitors', target: t, value: seen })
         break
       }
       case 'vampireHunter':
-        note(pid, T.role === 'vampire' ? `🗡️ ${T.name} has laser eyes — you staked them!` : `${T.name} is not a Maxi.`)
+        note(pid, T.role === 'vampire' ? 'staked' : 'notMaxi', { p: t })
         rec(pid, { kind: T.role === 'vampire' ? 'vamp' : 'notVamp', target: t })
         break
       default:
@@ -537,8 +538,8 @@ export function resolveNight(s) {
   const spies = inv.filter((i) => i.r === 'spy')
   for (const { pid } of spies) {
     const cabalVisits = [...new Set(visits.filter((v) => isCabal(P[v.from]) && !isCabal(P[v.to])).map((v) => v.to))]
-    for (const t of cabalVisits) note(pid, `🎧 A Cabal member visited ${nm(t)}.`)
-    if (!cabalVisits.length) note(pid, '🎧 The Cabal visited no one tonight.')
+    for (const t of cabalVisits) note(pid, 'cabalVisited', { p: t })
+    if (!cabalVisits.length) note(pid, 'cabalNoOne')
     rec(pid, { kind: 'cabalVisits', value: cabalVisits })
   }
 
@@ -553,10 +554,11 @@ export function resolveNight(s) {
       const j = clean[pid]
       P[j].uses.cleans--
       P[j].memo.known[pid] = T.role
-      note(j, `🧼 You laundered ${T.name}'s death. They were the ${R(T).name}.${T.will ? ` Their switch read: “${T.will}”` : ''}`)
+      note(j, T.will || T.willTr ? 'launderedWill' : 'launderedIt', { p: pid, role: T.role, will: T.willTr ?? T.will })
     }
     if (forged) P[forge[pid].by].uses.forges--
-    const cards = hits.map((h) => P[h.from].note).filter((c, i) => c && ['cabal', 'sk', 'arso', 'ww'].includes(hits[i].cause))
+    // A human's calling card is their text; a bot's is a line from its pool ({ k, i }).
+    const cards = hits.map((h) => P[h.from].noteTr ?? P[h.from].note).filter((c, i) => c && ['cabal', 'sk', 'arso', 'ww'].includes(hits[i].cause))
     const g = {
       pid,
       day: N,
@@ -564,8 +566,10 @@ export function resolveNight(s) {
       causes: [...new Set(hits.map((h) => h.cause))],
       role: cleaned ? null : forged ? forge[pid].role : T.role,
       will: cleaned ? '' : forged ? forge[pid].will : T.will,
-      cards: [...new Set(cards)],
+      willTr: cleaned ? null : forged ? forge[pid].willTr : (T.willTr ?? null),
+      cards: [...new Map(cards.map((c) => [JSON.stringify(c), c])).values()],
       cleaned,
+      forged,
     }
     s.graveyard.push(g)
     deaths.push(g)
@@ -573,13 +577,13 @@ export function resolveNight(s) {
       const jl = P[jail.jailor]
       if (ROLES[T.role].faction === 'town') {
         jl.uses.executions = 0
-        note(jail.jailor, 'You liquidated a Town member. You can no longer liquidate anyone.', 'bad')
+        note(jail.jailor, 'jailorTown', {}, 'bad')
       } else jl.uses.executions--
     }
   }
   for (const t of dox) if (P[t].alive) {
     s.blackmailed[t] = N + 1
-    note(t, '📸 Someone doxxed you! You can’t talk tomorrow.', 'bad')
+    note(t, 'doxxed', {}, 'bad')
   }
 
   const news = []
@@ -587,14 +591,14 @@ export function resolveNight(s) {
     const T = P[t]
     const g = grave(s, t)
     if (T.alive || !g || g.cleaned || ROLES[T.role].faction !== 'town') {
-      note(pid, 'The fork failed — that player can’t be revived.')
+      note(pid, 'forkFailed')
       continue
     }
     P[pid].uses.revive--
     T.alive = true
     s.graveyard = s.graveyard.filter((x) => x.pid !== t)
-    note(t, '🍴 A Hard Forker rolled the chain back — you have been revived!', 'good')
-    news.push(`🍴 ${T.name} has been revived by a hard fork!`)
+    note(t, 'revivedYou', {}, 'good')
+    news.push({ k: 'revived', v: { p: t } })
   }
   for (const { pid, t } of remember) {
     const p = P[pid]
@@ -602,19 +606,21 @@ export function resolveNight(s) {
     const newRole = P[t].role
     p.uses.remember--
     becomeRole(s, p, newRole)
-    note(pid, `📋 You copied ${P[t].name}. You are now the ${ROLES[newRole].name}.`, 'good')
-    news.push(`📋 A Copy Trader copied the ${ROLES[newRole].name}!`)
+    note(pid, 'copiedYou', { p: t, role: newRole }, 'good')
+    news.push({ k: 'copied', v: { role: newRole } })
   }
 
   // Bugs report what happened to their target.
-  for (const { pid, t } of spies) for (const n of notes[t] ?? []) note(pid, `🪲 Your bug on ${nm(t)}: ${n.text}`)
+  for (const { pid, t } of spies) for (const n of notes[t] ?? []) note(pid, 'bug', { p: t, msg: { k: n.k, v: n.v } })
 
   afterDeaths(s, notes)
   for (const [pid, list] of Object.entries(notes)) {
     const seen = new Set()
-    for (const n of list) if (!seen.has(n.text)) {
-      seen.add(n.text)
-      tell(s, Number(pid), n.text, n.tone)
+    for (const n of list) {
+      const key = JSON.stringify([n.k, n.v])
+      if (seen.has(key)) continue
+      seen.add(key)
+      tell(s, Number(pid), n.k, n.v, n.tone)
     }
   }
   s.haunt = null
@@ -624,12 +630,12 @@ export function resolveNight(s) {
 // Promotions and role changes that follow any death (night or day).
 export function afterDeaths(s, notes = null) {
   const P = s.players
-  const msg = (pid, text, tone = 'info') => (notes ? (notes[pid] ??= []).push({ text, tone }) : tell(s, pid, text, tone))
+  const msg = (pid, k, tone = 'info') => (notes ? (notes[pid] ??= []).push({ k, v: {}, tone }) : tell(s, pid, k, {}, tone))
   for (const p of P) {
     if (!p.alive) continue
     if (p.role === 'executioner' && p.target !== null && !P[p.target].alive && !p.won) {
       becomeRole(s, p, 'jester')
-      msg(p.id, '📉 Your target died before the town could slash them. You are now a Shitposter.', 'bad')
+      msg(p.id, 'exeToJester', 'bad')
     }
   }
   const cabal = P.filter((p) => p.alive && isCabal(p))
@@ -637,22 +643,22 @@ export function afterDeaths(s, notes = null) {
     const maf = cabal.find((p) => p.role === 'mafioso')
     if (maf && P.some((p) => p.role === 'godfather' && !p.alive)) {
       becomeRole(s, maf, 'godfather')
-      msg(maf.id, '💼 The VC is dead. You are the new VC.', 'good')
-      post(s, { room: 'cabal', from: null, text: `💼 ${maf.name} has been promoted to VC.` })
+      msg(maf.id, 'newVc', 'good')
+      post(s, { room: 'cabal', from: null, k: 'promotedVc', v: { p: maf.id } })
     }
   }
   if (cabal.length && !cabal.some((p) => p.role === 'godfather' || p.role === 'mafioso')) {
     const pick = cabal[Math.floor(Math.random() * cabal.length)]
     becomeRole(s, pick, 'mafioso')
-    msg(pick.id, '🔪 No Cabal killer is left. You are now the Rug Puller.', 'good')
-    post(s, { room: 'cabal', from: null, text: `🔪 ${pick.name} is now the Rug Puller.` })
+    msg(pick.id, 'nowRugPuller', 'good')
+    post(s, { room: 'cabal', from: null, k: 'newRugPuller', v: { p: pick.id } })
   }
   if (!P.some((p) => p.alive && p.role === 'vampire'))
     for (const p of P)
       if (p.alive && p.role === 'vampireHunter') {
         becomeRole(s, p, 'vigilante')
         p.uses.bullets = 1
-        msg(p.id, '🎩 Every Maxi is dead. You are now a White Hat with 1 bullet.', 'good')
+        msg(p.id, 'nowWhiteHat', 'good')
       }
 }
 
@@ -692,13 +698,13 @@ export function endGame(s, winner, reason = null) {
       return false
     })
     .map((p) => p.id)
-  const head = winner ? `🏆 ${TEAM_NAMES[winner]} ${winner === 'town' || winner === 'cabal' || winner === 'vampire' ? 'win' : 'wins'}!` : '🤝 The game ends in a draw.'
-  sys(s, reason ? `${head} ${reason}` : head, { tone: 'win' })
+  // Teams of many "win"; a lone killer "wins".
+  const head = winner ? { k: PLURAL_TEAMS.has(winner) ? 'winTeam' : 'winSolo', v: { team: winner } } : { k: 'drawEnd' }
+  if (reason) sys(s, 'withReason', { head, reason: { k: reason } }, { tone: 'win' })
+  else sys(s, head.k, head.v, { tone: 'win' })
 }
 
-// One-line summary of a death for chat and the Burn Address.
-export function deathLine(s, g) {
-  const p = s.players[g.pid]
-  const how = g.causes.map((c) => CAUSES[c]).join(', and ')
-  return `${p.name} was ${how}.`
-}
+export const PLURAL_TEAMS = new Set(['town', 'cabal', 'vampire'])
+
+// One-line summary of a death for chat and the Burn Address, as a message.
+export const deathLine = (g) => ({ k: 'death', v: { p: g.pid, causes: g.causes } })

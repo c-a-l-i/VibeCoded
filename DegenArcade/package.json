@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "i18n": "node scripts/check-i18n.mjs",
     "preview": "vite preview",
     "server": "node server/index.js",
     "host": "vite build && node server/index.js",

@@ -11,6 +11,7 @@ import DevModal from './components/DevModal.jsx'
 import GameOver from './components/GameOver.jsx'
 import './catan.css'
 import { upgradeColors } from '../display.js'
+import { t } from '../i18n/index.js'
 
 export const SAVE_KEY = 'satoshi-settlers-save-v1'
 
@@ -90,19 +91,19 @@ export default function CatanApp({ onMenu, net = null }) {
   useEffect(() => {
     if (net || !state || !actor?.isAI || rolling || state.phase === 'gameover') return
     const delay = { setup: 650, preroll: 800, hacker: 1000, steal: 700, discard: 900 }[state.phase] ?? 750
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const a = aiAction(state)
       if (a) act(a)
     }, delay)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [state, actor, rolling, act, net])
 
-  if (!state && net) return <p className="setup tagline">Loading the game…</p>
+  if (!state && net) return <p className="setup tagline">{t('ui.loading')}</p>
   if (!state) return <Setup onStart={(players) => dispatch({ type: 'NEW_GAME', players })} onBack={onMenu} />
 
   const quit = () => {
     if (net) return net.toLobby()
-    if (state.phase === 'gameover' || confirm('Abandon this game and start a new one?')) {
+    if (state.phase === 'gameover' || confirm(t('ui.abandon'))) {
       setModal(null)
       setMode(null)
       dispatch({ type: 'QUIT' })

@@ -1,6 +1,6 @@
-import { ROLES, slotName, slotFaction, FACTIONS, SLOTS } from '../roles.js'
-import { CAUSES } from '../rules.js'
+import { ROLES, slotFaction, FACTIONS, SLOTS } from '../roles.js'
 import { knownRole } from '../view.js'
+import { t, N, list } from '../../i18n/index.js'
 import { RoleName, Who } from './bits.jsx'
 
 const SLOT_COLORS = { town: FACTIONS.town.color, cabal: FACTIONS.cabal.color, neutral: FACTIONS.neutral.color, any: 'var(--gold)' }
@@ -10,7 +10,7 @@ const CAUSE_ICON = {
 
 function Claims({ s }) {
   const rows = s.players.filter((p) => p.alive && s.claims[p.id])
-  if (!rows.length) return <p className="muted small">Nobody has claimed yet.</p>
+  if (!rows.length) return <p className="muted small">{t('salem.noClaims')}</p>
   // Highlight claims that can't all be true: two living players on a one-of-a-kind role.
   const count = {}
   for (const p of rows) count[s.claims[p.id].role] = (count[s.claims[p.id].role] ?? 0) + 1
@@ -25,7 +25,7 @@ function Claims({ s }) {
             <span>
               {p.revealed ? '🐋 ' : ''}
               <RoleName role={role} short />
-              {clash && <span className="tag neg">CLASH</span>}
+              {clash && <span className="tag neg">{t('salem.clash')}</span>}
             </span>
           </li>
         )
@@ -39,8 +39,8 @@ export default function Side({ state: s, view, onDead, onGuide }) {
     <aside className="ts-side">
       <div className="panel">
         <div className="panel-head">
-          <h2>Role list</h2>
-          <span className="muted small">{s.list.length} players</span>
+          <h2>{t('salem.roleList')}</h2>
+          <span className="muted small">{t('salem.playersCount', { n: s.list.length })}</span>
         </div>
         <ul className="ts-rolelist">
           {s.list.map((slot, i) => (
@@ -49,10 +49,10 @@ export default function Side({ state: s, view, onDead, onGuide }) {
                 className="ts-slot"
                 style={{ '--sc': SLOT_COLORS[slotFaction(slot)] }}
                 onClick={() => onGuide(ROLES[slot] ? slot : null)}
-                title={ROLES[slot] ? `${ROLES[slot].name} = ${ROLES[slot].classic}` : SLOTS[slot].roles().map((r) => ROLES[r].name).join(', ')}
+                title={ROLES[slot] ? `${N.role(slot)} = ${N.roleClassic(slot)}` : list(SLOTS[slot].roles().map(N.role))}
               >
                 {ROLES[slot] ? `${ROLES[slot].icon} ` : ''}
-                {slotName(slot)}
+                {N.slot(slot)}
               </button>
             </li>
           ))}
@@ -61,8 +61,8 @@ export default function Side({ state: s, view, onDead, onGuide }) {
 
       <div className="panel">
         <div className="panel-head">
-          <h2>🔥 Burn Address</h2>
-          <span className="muted small">{s.graveyard.length} dead</span>
+          <h2>{t('salem.burn')}</h2>
+          <span className="muted small">{t('salem.deadCount', { n: s.graveyard.length })}</span>
         </div>
         {s.graveyard.length ? (
           <ul className="ts-grave">
@@ -70,8 +70,8 @@ export default function Side({ state: s, view, onDead, onGuide }) {
               const p = s.players[g.pid]
               return (
                 <li key={g.pid}>
-                  <button onClick={() => onDead(g.pid)} title={g.causes.map((c) => CAUSES[c]).join(', ')}>
-                    <span className="ts-grave-when mono">{g.when === 'day' ? `D${g.day}` : `N${g.day}`}</span>
+                  <button onClick={() => onDead(g.pid)} title={list(g.causes.map(N.cause))}>
+                    <span className="ts-grave-when mono">{t(g.when === 'day' ? 'salem.dayShort' : 'salem.nightShort', { n: g.day })}</span>
                     <Who p={p} />
                     <span className="ts-grave-role">
                       <RoleName role={knownRole(s, view, g.pid) ?? 'cleaned'} short />
@@ -83,13 +83,13 @@ export default function Side({ state: s, view, onDead, onGuide }) {
             })}
           </ul>
         ) : (
-          <p className="muted small">Empty. For now.</p>
+          <p className="muted small">{t('salem.emptyGrave')}</p>
         )}
       </div>
 
       <div className="panel">
         <div className="panel-head">
-          <h2>🪪 Claims</h2>
+          <h2>{t('salem.claims')}</h2>
         </div>
         <Claims s={s} />
       </div>

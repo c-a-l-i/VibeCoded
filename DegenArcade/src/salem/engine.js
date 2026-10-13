@@ -1,7 +1,7 @@
 // Game engine for Town of Solana: creates the game, runs the phase clock and applies every player action.
-import { ROLES, rollRoles, AVATARS, COLORS } from './roles.js'
+import { ROLES, rollRoles, AVATARS, COLORS, INV_GROUPS } from './roles.js'
 import {
-  R, living, isCabal, sameTeam, tally, votesNeeded, voteWeight, rooms, blackmailed, validAction, resolveNight,
+  living, isCabal, sameTeam, tally, votesNeeded, voteWeight, rooms, blackmailed, validAction, resolveNight,
   afterDeaths, becomeRole, checkWin, endGame, deathLine, initUses, post, sys, tell, fullMoon,
 } from './rules.js'
 import * as ai from './ai.js'
@@ -51,8 +51,10 @@ export function createGame({ mode, list, seats, pace = 'normal' }) {
     startRole: deal[i],
     alive: true,
     will: '',
+    willTr: null, // a bot's switch as message lines
     willData: null,
     note: '',
+    noteTr: null, // a bot's calling card as a pool line
     uses: initUses(deal[i]),
     revealed: false,
     target: null,
@@ -77,15 +79,14 @@ export function createGame({ mode, list, seats, pace = 'normal' }) {
   }
   for (const p of players) {
     if (p.role === 'executioner') becomeRole(s, p, 'executioner')
-    if (p.isAI) p.note = ai.deathCard(p.role)
+    if (p.isAI) p.noteTr = ai.deathCard(p.role)
   }
-  sys(s, '☀️ Day 1 — gm, Solana. Somewhere in this town a Cabal is planning a rug.', { tone: 'day' })
+  sys(s, 'day1', {}, { tone: 'day' })
   for (const p of players) {
-    const r = R(p)
-    tell(s, p.id, `You are the ${r.icon} ${r.name}. ${r.ability}`, 'role')
+    tell(s, p.id, 'youAre', { roleIcon: p.role, ability: p.role }, 'role')
     const mates = players.filter((q) => q.id !== p.id && sameTeam(p, q))
-    if (mates.length) tell(s, p.id, `Your ${isCabal(p) ? 'Cabal' : 'fellow Maxis'}: ${mates.map((q) => `${q.name} (${R(q).name})`).join(', ')}.`)
-    if (p.role === 'executioner') tell(s, p.id, `📉 Your target is ${players[p.target].name}. Get them slashed.`)
+    if (mates.length) tell(s, p.id, isCabal(p) ? 'cabalMates' : 'maxiMates', { list: mates.map((q) => ({ k: 'mate', v: { p: q.id, role: q.role } })) })
+    if (p.role === 'executioner') tell(s, p.id, 'exeTarget', { p: p.target })
   }
   afterDeaths(s) // a Cabal without a killer gets a Rug Puller
   ai.onStart(s)
@@ -170,7 +171,7 @@ function startVoting(s) {
   if (s.trials >= 3) return startNight(s)
   s.votes = {}
   setPhase(s, 'voting', DUR.voting)
-  sys(s, `🗳️ Voting is open. ${votesNeeded(s)} votes put someone on trial.`, { tone: 'vote' })
+  sys(s, 'votingOpen', { n: votesNeeded(s) }, { tone: 'vote' })
 }
 
 function resumeVoting(s) {
@@ -180,7 +181,7 @@ function resumeVoting(s) {
   setPhase(s, 'voting', 0)
   s.dur = left
   s.votes = {}
-  sys(s, `🗳️ Back to voting. ${votesNeeded(s)} votes needed.`, { tone: 'vote' })
+  sys(s, 'votingBack', { n: votesNeeded(s) }, { tone: 'vote' })
 }
 
 function startTrial(s, acc) {
@@ -188,8 +189,7 @@ function startTrial(s, acc) {
   s.trials++
   s.trial = { accused: acc, n: s.trials }
   s.judge = {}
-  const name = s.players[acc].name
-  sys(s, `⚖️ The town put ${name} on trial. ${name}, defend yourself.`, { tone: 'warn' })
+  sys(s, 'trial', { p: acc }, { tone: 'warn' })
   setPhase(s, 'defense', DUR.defense)
 }
 
@@ -209,9 +209,9 @@ function verdict(s) {
   const convicted = g > i
   Object.assign(s.trial, lists, { g, i, convicted })
   s.history.push({ day: s.day, accused: acc, ...lists, lynched: convicted })
-  const who = (ids) => ids.map((x) => s.players[x].name + (s.players[x].revealed ? ' (×3)' : '')).join(', ') || '—'
-  sys(s, `${convicted ? '🔨' : '😇'} The town voted ${convicted ? 'GUILTY' : 'INNOCENT'}, ${g} to ${i}.`, { tone: convicted ? 'bad' : 'good' })
-  sys(s, `Guilty: ${who(lists.guilty)} · Innocent: ${who(lists.innocent)} · Abstained: ${who(lists.abstain)}`, { tone: 'dim' })
+  sys(s, convicted ? 'guilty' : 'innocent', { g, i }, { tone: convicted ? 'bad' : 'good' })
+  const x3 = living(s).filter((p) => p.revealed).map((p) => p.id)
+  sys(s, 'tally', { guilty: lists.guilty, inno: lists.innocent, abst: lists.abstain, x3 }, { tone: 'dim' })
   setPhase(s, 'verdict', DUR.verdict)
 }
 
@@ -219,18 +219,18 @@ function lynch(s) {
   const acc = s.trial.accused
   const p = s.players[acc]
   p.alive = false
-  const g = { pid: acc, day: s.day, when: 'day', causes: ['lynch'], role: p.role, will: p.will, cards: [], cleaned: false }
+  const g = { pid: acc, day: s.day, when: 'day', causes: ['lynch'], role: p.role, will: p.will, willTr: p.willTr ?? null, cards: [], cleaned: false, forged: false }
   s.graveyard.push(g)
   revealDeath(s, g)
   if (p.role === 'jester') {
     p.won = true
     s.haunt = { jester: acc, voters: [...s.trial.guilty, ...s.trial.abstain].filter((x) => s.players[x].alive) }
-    sys(s, '🤡 The Shitposter got slashed — and will haunt one of you tonight.', { tone: 'bad' })
+    sys(s, 'jesterHaunt', {}, { tone: 'bad' })
   }
   for (const x of s.players)
     if (x.role === 'executioner' && x.target === acc && !x.won) {
       x.won = true
-      tell(s, x.id, '📉 Your target got slashed. You win!', 'good')
+      tell(s, x.id, 'exeWin', {}, 'good')
     }
   s.quiet = 0
   afterDeaths(s)
@@ -241,12 +241,14 @@ function lynch(s) {
 // Announce a death and fold the dead player's switch into the public record.
 function revealDeath(s, g) {
   const p = s.players[g.pid]
-  post(s, { room: 'system', kind: 'death', pid: g.pid, text: deathLine(s, g), tone: 'death' })
-  if (g.role) sys(s, `${p.name}’s role was ${ROLES[g.role].icon} ${ROLES[g.role].name}.`, { tone: 'death' })
-  else sys(s, `We couldn’t tell what ${p.name} was — their death was laundered 🧼.`, { tone: 'death' })
-  if (g.will) post(s, { room: 'system', kind: 'will', pid: g.pid, text: g.will })
-  for (const c of g.cards) post(s, { room: 'system', kind: 'card', pid: g.pid, text: c })
-  if (g.cleaned || g.will !== p.will || !g.will) return
+  post(s, { room: 'system', kind: 'death', pid: g.pid, ...deathLine(g), tone: 'death' })
+  if (g.role) sys(s, 'roleWas', { p: g.pid, roleIcon: g.role }, { tone: 'death' })
+  else sys(s, 'launderedDeath', { p: g.pid }, { tone: 'death' })
+  // A bot's switch is a list of message lines (willTr); a human's is their own text.
+  if (g.will || g.willTr) post(s, { room: 'system', kind: 'will', pid: g.pid, text: g.will, ...(g.willTr ? { tr: g.willTr } : {}) })
+  // Calling cards are a human's text, or a bot's line from a pool ({ k, i }).
+  for (const c of g.cards) post(s, { room: 'system', kind: 'card', pid: g.pid, ...(typeof c === 'string' ? { text: c } : { tr: [c] }) })
+  if (g.cleaned || g.forged || !(g.will || g.willTr)) return
   const reports = p.isAI ? (p.willData ?? []) : (ai.parse(s, p.id, g.will, g.role)?.reports ?? [])
   for (const r of reports) s.reports.push({ ...r, by: g.pid, as: g.role, day: s.day, id: s.nextId, source: 'will' })
 }
@@ -256,7 +258,7 @@ function revealDeath(s, g) {
 function startNight(s, { lynched = false } = {}) {
   for (const a of ai.beforeNight(s)) apply(s, a)
   if (!lynched) s.quiet++
-  if (s.quiet >= 8) return endGame(s, null, 'Nobody has died in four days.')
+  if (s.quiet >= 8) return endGame(s, null, 'quiet')
   const hs = nightHumans(s)
   setPhase(s, 'night', hs.length ? DUR.night * Math.max(1, hs.length) : 3)
   s.actions = {}
@@ -271,8 +273,8 @@ function startNight(s, { lynched = false } = {}) {
   const pick = s.jailPick
   if (jailor && pick !== null && pick !== jailor.id && s.players[pick].alive) {
     s.jail = { jailor: jailor.id, prisoner: pick, execute: false }
-    tell(s, pick, '🧊 You were hauled off to Cold Storage! Talk to the Custodian.', 'bad')
-    post(s, { room: 'jail', from: null, text: `🧊 ${s.players[pick].name} is locked in Cold Storage.`, jailor: jailor.id, prisoner: pick })
+    tell(s, pick, 'hauled', {}, 'bad')
+    post(s, { room: 'jail', from: null, k: 'locked', v: { p: pick }, jailor: jailor.id, prisoner: pick })
   }
   s.jailPick = null
   s.seance = null
@@ -280,10 +282,10 @@ function startNight(s, { lynched = false } = {}) {
   if (sp && s.players[sp.medium].uses.seance > 0 && s.players[sp.target].alive) {
     s.players[sp.medium].uses.seance--
     s.seance = sp
-    post(s, { room: 'seance', from: null, text: `🔮 An Oracle reaches out from beyond the chain to ${s.players[sp.target].name}.`, ...sp })
+    post(s, { room: 'seance', from: null, k: 'seance', v: { p: sp.target }, ...sp })
   }
   s.seancePick = null
-  sys(s, `🌙 Night ${s.day}${fullMoon(s) ? ' — 🌕 full moon' : ''}. The town sleeps…`, { tone: 'night' })
+  sys(s, fullMoon(s) ? 'nightMoon' : 'night', { n: s.day }, { tone: 'night' })
   for (const a of ai.planNight(s)) apply(s, a)
 }
 
@@ -293,10 +295,10 @@ function endNight(s) {
   s.day++
   s.phase = 'morning'
   s.morning = { deaths: res.deaths, news: res.news }
-  sys(s, `☀️ Day ${s.day}.`, { tone: 'day' })
-  if (!res.deaths.length) sys(s, 'Nobody died last night. Bullish. 📈')
+  sys(s, 'day', { n: s.day }, { tone: 'day' })
+  if (!res.deaths.length) sys(s, 'noDeaths')
   for (const g of res.deaths) revealDeath(s, g)
-  for (const n of res.news) sys(s, n, { tone: 'good' })
+  for (const n of res.news) sys(s, n.k, n.v, { tone: 'good' })
   s.quiet = res.deaths.length ? 0 : s.quiet + 1
   s.jail = null
   s.seance = null
@@ -324,8 +326,8 @@ export function apply(s, a) {
       const prev = s.votes[p.id] ?? null
       if (prev === t) return false
       s.votes[p.id] = t
-      if (t === null) sys(s, `${p.name} cancelled their vote.`, { tone: 'dim' })
-      else sys(s, `🗳️ ${p.name} ${prev !== null ? 'changed their vote to' : 'voted against'} ${s.players[t].name}.`, { tone: 'vote', voter: p.id })
+      if (t === null) sys(s, 'unvoted', { p: p.id }, { tone: 'dim' })
+      else sys(s, prev !== null ? 'revoted' : 'voted', { p: p.id, q: t }, { tone: 'vote', voter: p.id })
       if (t !== null && (tally(s)[t] ?? 0) >= votesNeeded(s)) startTrial(s, t)
       return true
     }
@@ -341,11 +343,11 @@ export function apply(s, a) {
         return true
       }
       const act = { t: a.t ?? [], ignite: !!a.ignite, forgeRole: a.forgeRole, forgeWill: a.forgeWill }
+      if (p.isAI && Array.isArray(a.forgeWillTr)) act.forgeWillTr = a.forgeWillTr
       if (!validAction(s, p.id, act)) return false
       s.actions[p.id] = act
       if (!p.isAI && isCabal(p) && act.t.length && s.jail?.prisoner !== p.id) {
-        const names = act.t.map((x) => s.players[x].name).join(' → ')
-        post(s, { room: 'cabal', from: null, text: `${p.name} (${R(p).name}) is targeting ${names}.` })
+        post(s, { room: 'cabal', from: null, k: 'targeting', v: { p: p.id, role: p.role, chain: act.t } })
       }
       return true
     }
@@ -367,7 +369,7 @@ export function apply(s, a) {
       s.jail.execute = !!a.on
       post(s, {
         room: 'jail', from: null, jailor: s.jail.jailor, prisoner: s.jail.prisoner,
-        text: a.on ? '⚖️ The Custodian has decided to liquidate the prisoner.' : '⚖️ The Custodian changed their mind.',
+        k: a.on ? 'execOn' : 'execOff',
       })
       return true
     case 'REVEAL':
@@ -375,7 +377,7 @@ export function apply(s, a) {
       p.revealed = true
       s.claims[p.id] = { role: 'mayor', day: s.day, at: s.nextId }
       s.claimLog.push({ pid: p.id, role: 'mayor', day: s.day })
-      sys(s, `🐋 ${p.name} has revealed themselves as the Whale! Their vote now counts 3 times.`, { tone: 'good' })
+      sys(s, 'revealed', { p: p.id }, { tone: 'good' })
       return true
     case 'SEANCE':
       if (p.role !== 'medium' || p.alive || p.uses.seance <= 0 || !DAYTIME(s)) return false
@@ -385,6 +387,8 @@ export function apply(s, a) {
     case 'WILL':
       if (!p.alive) return false
       p.will = String(a.text ?? '').slice(0, 600)
+      // Bots write their switch as message lines so each player reads it in their own language.
+      p.willTr = p.isAI && Array.isArray(a.tr) ? a.tr : null
       return true
     case 'NOTE':
       if (!p.alive) return false
@@ -395,23 +399,65 @@ export function apply(s, a) {
   }
 }
 
-function say(s, p, { room = 'town', text, to = null, data = null }) {
+// Message parts a chat line may be built from, checked so a client can't post anything else.
+const TR_KEYS = new Set([
+  'greet', 'chatter', 'rip', 'claim', 'update', 'counter', 'defend', 'accuse', 'ask', 'vouch', 'again', 'noClaim', 'saysGuilty',
+  'saysInno', 'lastTown', 'lastEvil', 'lastJester', 'jesterTalk', 'whale', 'jailAsk', 'jailExec', 'jailSpare', 'iAm', 'iWas',
+  'qAccuse', 'qVouch', 'qAsk', 'blackmailed', 'whaleDefense', 'rSus', 'rClean', 'rGroup', 'rWatched', 'rWatchedNone', 'rCabal',
+  'rMaxi', 'relaySus', 'relayClean', 'relayEvil', 'relaySeen', 'relayGroup', 'planKill', 'planBoss', 'planFrame', 'planDox',
+  'planShill', 'planLaunder', 'planSpoof', 'planDisguise', 'planSnoop', 'planCover', 'planBite',
+])
+const small = (x) => Number.isInteger(x) && x >= 0 && x < 100
+
+function cleanTr(s, tr) {
+  if (!Array.isArray(tr) || !tr.length || tr.length > 8) return null
+  const seat = (x) => Number.isInteger(x) && x >= 0 && x < s.players.length
+  const ok = {
+    x: seat,
+    y: seat,
+    p: seat,
+    ps: (x) => Array.isArray(x) && x.length <= 15 && x.every(seat),
+    role: (x) => typeof x === 'string' && Object.hasOwn(ROLES, x),
+    n: small,
+    inv: (x) => Number.isInteger(x) && x >= 0 && x < INV_GROUPS.length,
+  }
+  const out = []
+  for (const part of tr) {
+    const k = part?.k
+    if (typeof k !== 'string' || !(TR_KEYS.has(k) || (k.startsWith('rDid.') && Object.hasOwn(ROLES, k.slice(5))))) return null
+    const v = {}
+    for (const [name, x] of Object.entries(part.v ?? {})) {
+      if (!Object.hasOwn(ok, name) || !ok[name](x)) return null
+      v[name] = x
+    }
+    if (part.i !== undefined && !small(part.i)) return null
+    out.push({ k, ...(Object.keys(v).length ? { v } : {}), ...(part.i !== undefined ? { i: part.i } : {}) })
+  }
+  return out
+}
+
+// A chat line is free text, or `tr`: a line built from message parts (bot lines and the quick-chat buttons),
+// which every player reads in their own language.
+function say(s, p, { room = 'town', text, tr = null, to = null, data = null }) {
   text = String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, 280)
-  if (!text) return false
+  tr = cleanTr(s, tr)
+  if (!text && !tr) return false
+  if (tr) text = ''
   if (room === 'whisper') {
     if (!p.alive || !DAYTIME(s) || blackmailed(s, p.id) || to === p.id || !s.players[to]?.alive) return false
-    post(s, { room: 'whisper', from: p.id, to, text })
-    sys(s, `🤫 ${p.name} is whispering to ${s.players[to].name}.`, { tone: 'dim' })
+    post(s, { room: 'whisper', from: p.id, to, text, ...(tr ? { tr } : {}) })
+    sys(s, 'whispering', { p: p.id, q: to }, { tone: 'dim' })
     return true
   }
   if (!rooms(s, p.id).includes(room)) return false
   if (room === 'town' && blackmailed(s, p.id)) {
-    text = 'I am blackmailed.'
+    text = ''
+    tr = [{ k: 'blackmailed' }]
     data = null
   }
   const extra = room === 'jail' ? { jailor: s.jail.jailor, prisoner: s.jail.prisoner } : room === 'seance' ? { ...s.seance } : {}
-  post(s, { room, from: p.id, text, ...(room === 'dead' && data ? { data } : {}), ...extra })
-  const info = data ?? (p.isAI ? null : ai.parse(s, p.id, text))
+  post(s, { room, from: p.id, text, ...(tr ? { tr } : {}), ...(room === 'dead' && data ? { data } : {}), ...extra })
+  const info = data ?? (p.isAI || !text ? null : ai.parse(s, p.id, text))
   if (!info) return true
   if (room === 'town') record(s, p.id, info)
   if (room === 'jail' && info.claim && s.jail.prisoner === p.id) s.players[s.jail.jailor].memo.jailClaims[p.id] = info.claim

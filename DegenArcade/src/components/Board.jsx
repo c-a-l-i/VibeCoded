@@ -1,5 +1,5 @@
 import { BOARD, groupVars } from '../data/board.js'
-import { money } from '../engine/game.js'
+import { t, look, N, money } from '../i18n/index.js'
 
 // Map a board index to its cell in the 11×11 grid, going counter-clockwise from GO (bottom-right).
 function placement(i) {
@@ -9,16 +9,9 @@ function placement(i) {
   return { row: i - 29, col: 11, side: 'right' }
 }
 
-const CORNERS = {
-  go: { title: 'GENESIS', sub: 'Collect $200 as you pass', arrow: '◀' },
-  jail: { title: 'SEC CUSTODY', sub: 'just visiting' },
-  parking: { title: 'HODL ZONE', sub: 'diamond hands rest here' },
-  gotojail: { title: 'SEC RAID!', sub: 'go directly to custody' },
-}
-
 function Buildings({ n }) {
-  if (n === 5) return <span className="dc" title="Data center" />
-  return Array.from({ length: n }, (_, i) => <span className="node" key={i} title="Node" />)
+  if (n === 5) return <span className="dc" title={t('mono.dataCenter')} />
+  return Array.from({ length: n }, (_, i) => <span className="node" key={i} title={t('mono.node')} />)
 }
 
 function Space({ sp, state, onClick }) {
@@ -28,6 +21,7 @@ function Space({ sp, state, onClick }) {
   const here = state.players.filter((p) => !p.bankrupt && p.pos === sp.id)
   const current = state.players[state.current]
   const isCorner = sp.id % 10 === 0
+  const name = N.space(sp.id)
   const style = {
     gridRow: row,
     gridColumn: col,
@@ -46,14 +40,14 @@ function Space({ sp, state, onClick }) {
     .join(' ')
 
   return (
-    <button className={cls} style={{ ...style, '--here': current.color }} onClick={() => onClick(sp.id)} title={sp.name}>
+    <button className={cls} style={{ ...style, '--here': current.color }} onClick={() => onClick(sp.id)} title={name}>
       <div className="space-inner">
         {isCorner ? (
           <div className="corner-body">
             <span className="corner-icon">{sp.icon}</span>
-            <span className="corner-title">{CORNERS[sp.type].title}</span>
-            <span className="corner-sub">{CORNERS[sp.type].sub}</span>
-            {CORNERS[sp.type].arrow && <span className="corner-arrow">{CORNERS[sp.type].arrow}</span>}
+            <span className="corner-title">{look(`mono.corners.${sp.type}`)[0]}</span>
+            <span className="corner-sub">{look(`mono.corners.${sp.type}`)[1]}</span>
+            {sp.type === 'go' && <span className="corner-arrow">◀</span>}
           </div>
         ) : (
           <>
@@ -62,17 +56,17 @@ function Space({ sp, state, onClick }) {
                 <Buildings n={pr.houses} />
               </div>
             )}
-            <div className="space-name">{sp.name}</div>
+            <div className="space-name">{name}</div>
             {sp.icon && <div className="space-icon">{sp.icon}</div>}
             {sp.price && <div className="space-price">{money(sp.price)}</div>}
-            {sp.type === 'tax' && <div className="space-price">Pay {money(sp.amount)}</div>}
+            {sp.type === 'tax' && <div className="space-price">{t('mono.payTax', { m: money(sp.amount) })}</div>}
             {owner && <div className="owner-strip" />}
             {owner && (
-              <span className="owner-token" title={`Owned by ${owner.name}`}>
+              <span className="owner-token" title={t('mono.ownedBy', { p: owner.name })}>
                 {owner.token}
               </span>
             )}
-            {pr?.mortgaged && <div className="stamp">MORTGAGED</div>}
+            {pr?.mortgaged && <div className="stamp">{t('mono.mortgagedStamp')}</div>}
           </>
         )}
       </div>

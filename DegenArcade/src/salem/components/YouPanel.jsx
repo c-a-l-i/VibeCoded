@@ -1,34 +1,25 @@
 import { useState } from 'react'
-import { ROLES, CATS, FACTIONS, LEVELS, ROLE_KEYS } from '../roles.js'
+import { ROLES, ROLE_KEYS } from '../roles.js'
 import { nightInfo, living, fullMoon } from '../rules.js'
 import { willFor } from '../ai.js'
 import { factionColor } from '../view.js'
+import { msgText, whyText, lineText } from '../text.js'
+import { t, tx, look, N } from '../../i18n/index.js'
 import { RoleName, Who } from './bits.jsx'
 
-const USES = {
-  bullets: ['🔫', 'bullet', 'bullets'],
-  alerts: ['🍯', 'honeypot left', 'honeypots left'],
-  vests: ['🧊', 'cold wallet', 'cold wallets'],
-  vest: ['🛡️', 'self-guard', 'self-guards'],
-  selfHeal: ['🩹', 'self-patch', 'self-patches'],
-  executions: ['⚖️', 'liquidation', 'liquidations'],
-  cleans: ['🧼', 'launder', 'launders'],
-  forges: ['✍️', 'spoof', 'spoofs'],
-  revive: ['🍴', 'revive', 'revives'],
-  remember: ['📋', 'copy', 'copies'],
-  seance: ['🔮', 'séance', 'séances'],
-}
+// Limited-use abilities, labelled under salem.uses.
+const USES = ['bullets', 'alerts', 'vests', 'vest', 'selfHeal', 'executions', 'cleans', 'forges', 'revive', 'remember', 'seance']
 const KILLERS = new Set(['godfather', 'mafioso', 'serialKiller', 'arsonist', 'werewolf'])
 const DAY_PHASES = ['day1', 'morning', 'discussion', 'voting', 'defense', 'judgement', 'verdict', 'lastwords']
 
 function Uses({ p }) {
-  const list = Object.entries(p.uses).filter(([k]) => USES[k])
+  const list = Object.entries(p.uses).filter(([k]) => USES.includes(k))
   if (!list.length) return null
   return (
     <div className="ts-uses">
       {list.map(([k, n]) => (
         <span key={k} className={`chip ${n ? '' : 'spent'}`}>
-          {USES[k][0]} {n} {n === 1 ? USES[k][1] : USES[k][2]}
+          {t(`salem.uses.${k}`, { n })}
         </span>
       ))}
     </div>
@@ -37,29 +28,26 @@ function Uses({ p }) {
 
 export function RoleCard({ role, p = null }) {
   const r = ROLES[role]
-  const cat = CATS[r.cat]
   return (
     <div className="ts-card" style={{ '--rc': factionColor(role) }}>
       <div className="ts-card-head">
         <span className="ts-card-icon">{r.icon}</span>
         <div>
-          <strong>{r.name}</strong>
-          <span className="muted small"> = {r.classic}</span>
-          <div className="ts-card-cat">{cat.name}</div>
+          <strong>{N.role(role)}</strong>
+          <span className="muted small"> = {N.roleClassic(role)}</span>
+          <div className="ts-card-cat">{N.cat(r.cat)}</div>
         </div>
       </div>
-      <p className="ts-card-ability">{r.ability}</p>
+      <p className="ts-card-ability">{N.ability(role)}</p>
       <ul className="ts-card-notes">
-        {r.notes.map((n) => (
+        {N.notes(role).map((n) => (
           <li key={n}>{n}</li>
         ))}
       </ul>
-      <p className="small ts-card-goal">
-        <b>Goal:</b> {r.goal ?? FACTIONS[r.faction].goal}
-      </p>
+      <p className="small ts-card-goal">{tx('salem.goal', { goal: N.goal(role) })}</p>
       <div className="ts-card-stats small muted">
-        <span>⚔️ Attack: {LEVELS[r.attack]}</span>
-        <span>🛡️ Defense: {r.defense === 3 ? 'Invincible' : LEVELS[r.defense]}</span>
+        <span>{t('salem.attack', { lvl: N.level(r.attack) })}</span>
+        <span>{t('salem.defense', { lvl: r.defense === 3 ? t('salem.invincible') : N.level(r.defense) })}</span>
       </div>
       {p && <Uses p={p} />}
     </div>
@@ -67,7 +55,7 @@ export function RoleCard({ role, p = null }) {
 }
 
 function Chips({ s, ids, sel, onPick }) {
-  if (!ids.length) return <p className="muted small">No valid targets.</p>
+  if (!ids.length) return <p className="muted small">{t('salem.noTargets')}</p>
   return (
     <div className="ts-targets">
       {ids.map((id) => {
@@ -88,34 +76,32 @@ function NightAction({ s, pid, act, onDone }) {
   const cur = s.actions[pid]
   const [first, setFirst] = useState(null)
   const done = !!s.done[pid]
-  const r = ROLES[p.role]
+  const verb = N.verb(p.role)
 
   let body
   if (p.role === 'jailor' && p.alive) {
     const j = s.jail?.jailor === pid ? s.jail : null
     body = j ? (
       <>
-        <p>
-          🧊 <Who p={s.players[j.prisoner]} /> is in Cold Storage. Question them in the chat.
-        </p>
+        <p>{tx('salem.inStorage', { p: <Who p={s.players[j.prisoner]} /> })}</p>
         {s.day < 2 ? (
-          <p className="muted small">No liquidations on Night 1.</p>
+          <p className="muted small">{t('salem.noExecN1')}</p>
         ) : p.uses.executions > 0 ? (
           <button className={`btn wide ${j.execute ? 'danger' : ''}`} onClick={() => act('EXECUTE', { on: !j.execute })}>
-            {j.execute ? `⚖️ Liquidating ${s.players[j.prisoner].name} — tap to spare` : `⚖️ Liquidate ${s.players[j.prisoner].name}`}
+            {t(j.execute ? 'salem.liquidating' : 'salem.liquidateP', { p: s.players[j.prisoner].name })}
           </button>
         ) : (
-          <p className="muted small">You have no liquidations left.</p>
+          <p className="muted small">{t('salem.noExecLeft')}</p>
         )}
       </>
     ) : (
-      <p className="muted small">You didn’t lock anyone up tonight. Pick a prisoner during the day.</p>
+      <p className="muted small">{t('salem.noPrisoner')}</p>
     )
-  } else if (!info.can) body = <p className="muted small">{info.reason}</p>
+  } else if (!info.can) body = <p className="muted small">{whyText(s, info.reason)}</p>
   else if (info.slots === 0)
     body = (
       <button className={`btn wide ${cur ? 'primary' : ''}`} onClick={() => act('NIGHT', cur ? { clear: true } : { t: [] })}>
-        {cur ? `✓ ${r.act.verb} tonight` : r.act.verb}
+        {cur ? t('salem.doneTonight', { verb }) : verb}
       </button>
     )
   else if (info.slots === 1) {
@@ -123,28 +109,28 @@ function NightAction({ s, pid, act, onDone }) {
     body = (
       <>
         <p className="small muted">
-          {p.role === 'jester' ? 'Haunt one of the players who voted guilty or abstained.' : `${r.act.verb}:`}
+          {p.role === 'jester' ? t('salem.hauntNote') : t('salem.verbColon', { verb })}
         </p>
         <Chips s={s} ids={info.targets[0]} sel={sel} onPick={(id) => act('NIGHT', sel[0] === id ? { clear: true } : { t: [id], forgeRole: cur?.forgeRole, forgeWill: cur?.forgeWill })} />
         {p.role === 'arsonist' && (
           <button className={`btn wide ${cur?.ignite ? 'danger' : ''}`} onClick={() => act('NIGHT', cur?.ignite ? { clear: true } : { t: [], ignite: true })}>
-            {cur?.ignite ? '🔥 Draining everyone tonight' : '🔥 Drain everyone you’ve approved'}
+            {cur?.ignite ? t('salem.draining') : t('salem.drain')}
           </button>
         )}
         {p.role === 'forger' && cur?.t?.length > 0 && (
           <div className="ts-forge">
             <label className="field">
-              Spoofed role
+              {t('salem.spoofRole')}
               <select value={cur.forgeRole ?? 'jester'} onChange={(e) => act('NIGHT', { ...cur, forgeRole: e.target.value })}>
                 {ROLE_KEYS.map((k) => (
                   <option key={k} value={k}>
-                    {ROLES[k].icon} {ROLES[k].name}
+                    {ROLES[k].icon} {N.role(k)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              Spoofed switch
+              {t('salem.spoofSwitch')}
               <textarea rows={3} defaultValue={cur.forgeWill ?? ''} onBlur={(e) => act('NIGHT', { ...cur, forgeWill: e.target.value })} />
             </label>
           </div>
@@ -153,7 +139,7 @@ function NightAction({ s, pid, act, onDone }) {
     )
   } else {
     const sel = cur?.t ?? (first !== null ? [first] : [])
-    const labels = p.role === 'disguiser' ? ['Cabal member', 'Disguise them as'] : p.role === 'witch' ? ['Phish', 'Make them target'] : ['Swap', 'with']
+    const labels = look(`salem.pickTwo.${p.role === 'disguiser' || p.role === 'witch' ? p.role : 'transporter'}`)
     const pickFirst = (id) => {
       setFirst(id)
       if (cur) act('NIGHT', { clear: true })
@@ -176,11 +162,11 @@ function NightAction({ s, pid, act, onDone }) {
   return (
     <div className="ts-action">
       <h3>
-        {fullMoon(s) ? '🌕' : '🌙'} Night {s.day}
+        {fullMoon(s) ? '🌕' : '🌙'} {t('salem.night', { n: s.day })}
       </h3>
       {body}
       <button className={`btn wide ${done ? '' : 'primary'}`} onClick={() => onDone(!done)}>
-        {done ? '✓ Done — waiting for dawn' : 'Done for tonight'}
+        {done ? t('salem.waitingDawn') : t('salem.doneForNight')}
       </button>
     </div>
   )
@@ -193,9 +179,9 @@ function DayAction({ s, pid, act }) {
     if (p.role === 'medium' && p.uses.seance > 0)
       out.push(
         <label key="seance" className="field">
-          🔮 Séance tonight with
+          {t('salem.seanceWith')}
           <select value={s.seancePick?.target ?? ''} onChange={(e) => act('SEANCE', { target: e.target.value === '' ? null : Number(e.target.value) })}>
-            <option value="">nobody</option>
+            <option value="">{t('salem.nobody')}</option>
             {living(s).map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
@@ -206,7 +192,7 @@ function DayAction({ s, pid, act }) {
       )
     out.push(
       <p key="dead" className="muted small">
-        You’re dead. You can still talk in the dead chat.
+        {t('salem.youreDead')}
       </p>,
     )
     return <div className="ts-action">{out}</div>
@@ -215,16 +201,16 @@ function DayAction({ s, pid, act }) {
     const v = s.votes[pid]
     out.push(
       <p key="vote" className="small">
-        🗳️ Tap a house to vote.{' '}
+        {t('salem.tapVote')}{' '}
         {v !== undefined && v !== null ? (
           <>
-            Your vote: <Who p={s.players[v]} />{' '}
+            {tx('salem.yourVote', { p: <Who p={s.players[v]} /> })}{' '}
             <button className="link" onClick={() => act('VOTE', { target: null })}>
-              cancel
+              {t('salem.cancelVote')}
             </button>
           </>
         ) : (
-          <span className="muted">No vote yet.</span>
+          <span className="muted">{t('salem.noVote')}</span>
         )}
       </p>,
     )
@@ -233,13 +219,9 @@ function DayAction({ s, pid, act }) {
     const v = s.judge[pid]
     out.push(
       <div key="judge" className="ts-judge">
-        {[
-          ['guilty', '🔨 Guilty'],
-          ['innocent', '😇 Innocent'],
-          ['abstain', '🤷 Abstain'],
-        ].map(([k, label]) => (
+        {['guilty', 'innocent', 'abstain'].map((k) => (
           <button key={k} className={`btn ${v === k ? 'primary' : ''}`} onClick={() => act('JUDGE', { verdict: k })}>
-            {label}
+            {t(`salem.verdicts.${k}`)}
           </button>
         ))}
       </div>,
@@ -248,15 +230,15 @@ function DayAction({ s, pid, act }) {
   if (['defense', 'lastwords'].includes(s.phase) && s.trial?.accused === pid)
     out.push(
       <p key="trial" className="notice neg">
-        ⚖️ You’re on trial. Make your case in the chat!
+        {t('salem.youOnTrial')}
       </p>,
     )
   if (p.role === 'jailor')
     out.push(
       <label key="jail" className="field">
-        🧊 Lock up tonight
+        {t('salem.lockUp')}
         <select value={s.jailPick ?? ''} onChange={(e) => act('JAIL', { target: e.target.value === '' ? null : Number(e.target.value) })}>
-          <option value="">nobody</option>
+          <option value="">{t('salem.nobody')}</option>
           {living(s)
             .filter((x) => x.id !== pid)
             .map((x) => (
@@ -269,8 +251,8 @@ function DayAction({ s, pid, act }) {
     )
   if (p.role === 'mayor' && !p.revealed)
     out.push(
-      <button key="reveal" className="btn wide" onClick={() => confirm('Reveal yourself as the Whale? Your vote counts 3×, but Core Devs can’t patch you anymore.') && act('REVEAL')}>
-        🐋 Reveal as the Whale
+      <button key="reveal" className="btn wide" onClick={() => confirm(t('salem.revealConfirm')) && act('REVEAL')}>
+        {t('salem.revealWhale')}
       </button>,
     )
   return out.length ? <div className="ts-action">{out}</div> : null
@@ -285,7 +267,7 @@ function Will({ s, pid, act }) {
   return (
     <div className="ts-will">
       <div className="panel-head">
-        <h2>📜 Dead man’s switch</h2>
+        <h2>{t('salem.switch')}</h2>
         {!edit && (
           <button
             className="link"
@@ -294,16 +276,20 @@ function Will({ s, pid, act }) {
               setEdit(true)
             }}
           >
-            edit
+            {t('salem.edit')}
           </button>
         )}
       </div>
       {edit ? (
         <>
-          <textarea rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Your role and results. The town reads this when you die." />
+          <textarea rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('salem.willPlaceholder')} />
           <div className="row end">
-            <button className="btn tiny ghost" onClick={() => setDraft(willFor(structuredClone(s), pid).text)} title="Fill in your role and night results">
-              ✨ Auto-fill
+            <button
+              className="btn tiny ghost"
+              onClick={() => setDraft(willFor(structuredClone(s), pid).tr.map((part) => msgText(s, part)).join('\n'))}
+              title={t('salem.autofillTip')}
+            >
+              {t('salem.autofill')}
             </button>
             <button
               className="btn tiny primary"
@@ -312,16 +298,16 @@ function Will({ s, pid, act }) {
                 setEdit(false)
               }}
             >
-              Save
+              {t('ui.save')}
             </button>
           </div>
         </>
       ) : (
-        <pre className={`ts-will-text ${p.will ? '' : 'muted'}`}>{p.will || 'Empty. Write your role and results so the town learns from your death.'}</pre>
+        <pre className={`ts-will-text ${p.will ? '' : 'muted'}`}>{p.will || t('salem.willEmpty')}</pre>
       )}
       {KILLERS.has(p.role) && (
         <label className="field small">
-          🃏 Calling card (left on your kills)
+          {t('salem.cardField')}
           <input value={note} maxLength={160} onChange={(e) => setNote(e.target.value)} onBlur={() => act('NOTE', { text: note })} />
         </label>
       )}
@@ -335,11 +321,11 @@ function LastNight({ s, pid }) {
   if (night < 1 || !msgs.length) return null
   return (
     <div className="ts-results">
-      <h2>Night {night} results</h2>
+      <h2>{t('salem.nightResults', { n: night })}</h2>
       <ul>
         {msgs.map((m) => (
           <li key={m.id} className={m.tone ?? ''}>
-            {m.text}
+            {lineText(s, m)}
           </li>
         ))}
       </ul>
@@ -351,23 +337,23 @@ export default function YouPanel({ state: s, me, act, multi, online, onReveal, o
   if (me === 'all')
     return (
       <aside className="panel ts-you">
-        <h2>👀 Spectating</h2>
-        <p className="muted small">All bots. Every role and chat is visible.</p>
+        <h2>{t('salem.spectatingTitle')}</h2>
+        <p className="muted small">{t('salem.spectatingNote')}</p>
       </aside>
     )
   if (me === null && online)
     return (
       <aside className="panel ts-you">
-        <h2>👀 Watching</h2>
-        <p className="muted small">You don’t have a seat in this game. Roles and private chats stay hidden until it ends.</p>
+        <h2>{t('salem.watchingTitle')}</h2>
+        <p className="muted small">{t('salem.watchingNote')}</p>
       </aside>
     )
   if (me === null) {
     const humans = s.players.filter((p) => !p.isAI)
     return (
       <aside className="panel ts-you">
-        <h2>🔒 Private views</h2>
-        <p className="muted small">Roles stay hidden on the shared screen. Tap your name, then pass the device back when you’re done.</p>
+        <h2>{t('salem.privateTitle')}</h2>
+        <p className="muted small">{t('salem.privateNote')}</p>
         <div className="ts-hotseat">
           {humans.map((p) => (
             <button key={p.id} className="btn wide" style={{ '--c': p.color }} onClick={() => onReveal(p.id)} disabled={s.phase === 'gameover'}>
@@ -392,23 +378,20 @@ export default function YouPanel({ state: s, me, act, multi, online, onReveal, o
         </h2>
         {multi && (
           <button className="btn tiny ghost" onClick={onHide}>
-            🙈 Hide
+            {t('salem.hide')}
           </button>
         )}
       </div>
       <RoleCard role={p.role} p={p} />
       {p.role === 'executioner' && p.target !== null && (
-        <p className="notice small">
-          🎯 Your target: <Who p={s.players[p.target]} />
-          {p.won ? ' — slashed. You win!' : ''}
-        </p>
+        <p className="notice small">{tx(p.won ? 'salem.targetWon' : 'salem.yourTarget', { p: <Who p={s.players[p.target]} /> })}</p>
       )}
-      {p.won && p.role === 'jester' && <p className="notice small">🤡 You got slashed. You win!</p>}
+      {p.won && p.role === 'jester' && <p className="notice small">{t('salem.jesterWon')}</p>}
       {isNight && <NightAction key={`${s.day}:${p.role}`} s={s} pid={me} act={act} onDone={onDone} />}
       {DAY_PHASES.includes(s.phase) && <DayAction s={s} pid={me} act={act} />}
       {DAY_PHASES.includes(s.phase) && p.alive && (
-        <button className={`btn wide ${s.ready[me] ? '' : 'ghost'}`} onClick={() => act('READY', { on: !s.ready[me] })} title="Skip the rest of this phase once every human is ready">
-          {s.ready[me] ? '✓ Ready — waiting on others' : '⏭ Ready to move on'}
+        <button className={`btn wide ${s.ready[me] ? '' : 'ghost'}`} onClick={() => act('READY', { on: !s.ready[me] })} title={t('salem.readyTip')}>
+          {s.ready[me] ? t('salem.readyOn') : t('salem.readyOff')}
         </button>
       )}
       <LastNight s={s} pid={me} />

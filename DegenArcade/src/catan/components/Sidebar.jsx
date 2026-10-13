@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { RESOURCES, RES, DEV, WIN_VP } from '../data.js'
 import { chainLength, handSize, victoryPoints } from '../engine.js'
 import DisplayButton from '../../components/DisplaySettings.jsx'
+import LanguageButton from '../../components/LanguageButton.jsx'
+import { t, N, fmt } from '../../i18n/index.js'
 
 function PlayerCard({ state, p, viewer }) {
   const active = state.current === p.id && state.phase !== 'gameover'
@@ -13,18 +15,18 @@ function PlayerCard({ state, p, viewer }) {
         <div className="player-id">
           <div className="player-name">
             {p.name}
-            {p.isAI && <span className="tag">{p.remote ? '🌐 ONLINE' : 'BOT'}</span>}
-            {state.longest?.pid === p.id && <span className="tag warn">⛓️ LONGEST CHAIN</span>}
-            {state.army?.pid === p.id && <span className="tag warn">🤖 BOTNET</span>}
+            {p.isAI && <span className="tag">{p.remote ? t('ui.tagOnline') : t('ui.tagBot')}</span>}
+            {state.longest?.pid === p.id && <span className="tag warn">{t('catan.tagLongest')}</span>}
+            {state.army?.pid === p.id && <span className="tag warn">{t('catan.tagBotnet')}</span>}
           </div>
           <div className="muted small st-stats">
-            <span title="Resource cards">🃏 {handSize(p)}</span>
-            <span title="Smart contracts held">📜 {p.dev.length}</span>
-            <span title="Hackers deployed">🥷 {p.knights}</span>
-            <span title="Longest chain">⛓️ {chainLength(state, p.id)}</span>
+            <span title={t('catan.cardsTip')}>🃏 {handSize(p)}</span>
+            <span title={t('catan.devsTip')}>📜 {p.dev.length}</span>
+            <span title={t('catan.hackersTip')}>🥷 {p.knights}</span>
+            <span title={t('catan.chainTip')}>⛓️ {chainLength(state, p.id)}</span>
           </div>
         </div>
-        <div className="player-money mono st-vp" title="Victory points">
+        <div className="player-money mono st-vp" title={t('catan.vpTip')}>
           {vp}
           <span className="muted">/{WIN_VP}</span>
         </div>
@@ -40,19 +42,15 @@ function Wallet({ state, pid }) {
   return (
     <div className="panel st-wallet" style={{ '--c': p.color }}>
       <div className="panel-head">
-        <h2>
-          {p.token} {p.name}'s wallet
-        </h2>
-        <span className="muted small">
-          ⚡{p.left.channel} 🟩{p.left.node} 🏢{p.left.dc} left
-        </span>
+        <h2>{t('catan.wallet', { token: p.token, p: p.name })}</h2>
+        <span className="muted small">{t('catan.piecesLeft', { c: p.left.channel, n: p.left.node, d: p.left.dc })}</span>
       </div>
       <div className="st-hand">
         {RESOURCES.map((r) => (
-          <div key={r} className={`st-card ${p.hand[r] ? '' : 'empty'}`} style={{ '--rc': RES[r].color }} title={`${RES[r].name} (${RES[r].classic})`}>
+          <div key={r} className={`st-card ${p.hand[r] ? '' : 'empty'}`} style={{ '--rc': RES[r].color }} title={`${N.res(r)} (${N.resClassic(r)})`}>
             <span className="st-card-icon">{RES[r].icon}</span>
             <span className="mono st-card-n">{p.hand[r]}</span>
-            <span className="st-card-name">{RES[r].name}</span>
+            <span className="st-card-name">{N.res(r)}</span>
           </div>
         ))}
       </div>
@@ -62,9 +60,9 @@ function Wallet({ state, pid }) {
             <span
               key={type}
               className={`chip ${cards.every((c) => c.turn === state.turn) ? 'fresh' : ''}`}
-              title={type === 'vp' ? cards.map((c) => c.name).join(', ') : DEV[type].text}
+              title={type === 'vp' ? cards.map((c) => c.name).join(', ') : N.devText(type)}
             >
-              {DEV[type].icon} {DEV[type].name}
+              {DEV[type].icon} {N.dev(type)}
               {cards.length > 1 ? ` ×${cards.length}` : ''}
             </span>
           ))}
@@ -84,8 +82,8 @@ export default function Sidebar({ state, viewer, onQuit, onMenu }) {
     <aside className="sidebar">
       <div className="panel">
         <div className="panel-head">
-          <h2>Players</h2>
-          <span className="muted small">{state.turn ? `Turn ${state.turn}` : 'Genesis round'}</span>
+          <h2>{t('ui.players')}</h2>
+          <span className="muted small">{state.turn ? t('ui.turn', { n: state.turn }) : t('catan.genesisRound')}</span>
         </div>
         <div className="players">
           {state.players.map((p) => (
@@ -98,17 +96,18 @@ export default function Sidebar({ state, viewer, onQuit, onMenu }) {
 
       <div className="panel toolbar">
         <button className="btn ghost" onClick={onQuit}>
-          ↺ New game
+          {t('ui.newGame')}
         </button>
         <button className="btn ghost" onClick={onMenu}>
-          ⌂ Main menu
+          {t('ui.mainMenu')}
         </button>
+        <LanguageButton icon />
         <DisplayButton icon />
       </div>
 
       <div className="panel log-panel">
         <div className="panel-head">
-          <h2>On-chain activity</h2>
+          <h2>{t('ui.activity')}</h2>
           <span className="muted small">
             {RESOURCES.map((r) => `${RES[r].icon}${state.bank[r]}`).join(' ')} · 📜{state.devDeck.length}
           </span>
@@ -116,7 +115,7 @@ export default function Sidebar({ state, viewer, onQuit, onMenu }) {
         <ul className="log" ref={logRef}>
           {state.log.map((e) => (
             <li key={e.id} style={{ '--c': e.pid !== null ? state.players[e.pid].color : 'var(--muted)' }}>
-              {e.text}
+              {e.text ?? fmt(e, { ns: 'catan.log', players: state.players })}
             </li>
           ))}
         </ul>

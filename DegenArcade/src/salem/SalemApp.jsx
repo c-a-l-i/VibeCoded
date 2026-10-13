@@ -12,6 +12,7 @@ import RoleGuide from './components/RoleGuide.jsx'
 import DeadModal from './components/DeadModal.jsx'
 import './salem.css'
 import { upgradeColors } from '../display.js'
+import { t } from '../i18n/index.js'
 
 export const SAVE_KEY = 'town-of-solana-save-v1'
 
@@ -95,7 +96,7 @@ export default function SalemApp({ onMenu, net = null }) {
   const actor = typeof me === 'number' ? me : null
   const act = (type, payload = {}) => actor !== null && dispatch({ type, pid: actor, ...payload })
 
-  if (!state && net) return <p className="setup tagline">Loading the game…</p>
+  if (!state && net) return <p className="setup tagline">{t('ui.loading')}</p>
   if (!state)
     return (
       <Setup
@@ -111,7 +112,7 @@ export default function SalemApp({ onMenu, net = null }) {
 
   const quit = () => {
     if (net) return net.toLobby()
-    if (state.phase === 'gameover' || confirm('Abandon this game and start a new one?')) {
+    if (state.phase === 'gameover' || confirm(t('ui.abandon'))) {
       setModal(null)
       setOpened(null)
       setPassing(null)

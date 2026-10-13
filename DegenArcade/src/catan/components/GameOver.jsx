@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { victoryPoints } from '../engine.js'
+import { t } from '../../i18n/index.js'
 
 const BITS = ['🚀', '💎', '🌕', '⬡', '✨', '📈']
 
@@ -25,8 +26,8 @@ export default function GameOver({ state, onNew, onMenu }) {
       ))}
       <div className="modal winner" style={{ '--c': w.color }}>
         <div className="winner-token">{w.token}</div>
-        <span className="eyebrow">To the moon</span>
-        <h1>{w.name} wins!</h1>
+        <span className="eyebrow">{t('catan.toTheMoon')}</span>
+        <h1>{t('ui.wins', { p: w.name })}</h1>
         <ul className="st-standings">
           {standings.map((p) => (
             <li key={p.id} style={{ '--c': p.color }}>
@@ -34,16 +35,16 @@ export default function GameOver({ state, onNew, onMenu }) {
                 <span className="who-token">{p.token}</span>
                 {p.name}
               </span>
-              <b className="mono">{victoryPoints(state, p.id)} VP</b>
+              <b className="mono">{t('catan.vp', { n: victoryPoints(state, p.id) })}</b>
             </li>
           ))}
         </ul>
         <div className="row">
           <button className="btn primary big" onClick={onNew}>
-            Play again
+            {t('ui.playAgain')}
           </button>
           <button className="btn ghost" onClick={onMenu}>
-            Main menu
+            {t('ui.mainMenuPlain')}
           </button>
         </div>
       </div>

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { ROLES, TEAM_NAMES } from '../roles.js'
+import { ROLES } from '../roles.js'
+import { PLURAL_TEAMS } from '../rules.js'
+import { t, N } from '../../i18n/index.js'
 import { RoleName, Who } from './bits.jsx'
 
 const BITS = ['⚖️', '💎', '🌕', '🚀', '✨', '📈']
@@ -10,7 +12,7 @@ export default function GameOver({ state: s, onNew, onMenu, onClose }) {
   const [confetti] = useState(makeConfetti)
   const humans = s.players.filter((p) => !p.isAI)
   const humanWon = humans.some((p) => s.winners.includes(p.id))
-  const title = s.winner ? `${TEAM_NAMES[s.winner]} ${['town', 'cabal', 'vampire'].includes(s.winner) ? 'win' : 'wins'}!` : 'Draw'
+  const title = s.winner ? t(PLURAL_TEAMS.has(s.winner) ? 'salem.winTitle' : 'salem.winTitleSolo', { team: N.team(s.winner) }) : t('salem.draw')
   const sorted = [...s.players].sort((a, b) => Number(s.winners.includes(b.id)) - Number(s.winners.includes(a.id)))
   return (
     <div className="modal-backdrop gameover">
@@ -21,7 +23,9 @@ export default function GameOver({ state: s, onNew, onMenu, onClose }) {
           </span>
         ))}
       <div className="modal winner ts-over" style={{ '--c': s.winner === 'town' ? 'var(--green)' : s.winner ? 'var(--red)' : 'var(--gold)' }}>
-        <span className="eyebrow">Day {s.day} · {humans.length ? (humanWon ? 'You win' : 'You lose') : 'Bots only'}</span>
+        <span className="eyebrow">
+          {t('salem.day', { n: s.day })} · {t(humans.length ? (humanWon ? 'salem.youWin' : 'salem.youLose') : 'salem.botsOnly')}
+        </span>
         <h1>{title}</h1>
         <ul className="ts-final">
           {sorted.map((p) => (
@@ -32,19 +36,19 @@ export default function GameOver({ state: s, onNew, onMenu, onClose }) {
                 {p.startRole !== p.role && <span className="muted small">{ROLES[p.startRole].icon} → </span>}
                 <RoleName role={p.role} short />
               </span>
-              {!p.isAI && <span className="tag">YOU</span>}
+              {!p.isAI && <span className="tag">{t('ui.tagYou')}</span>}
             </li>
           ))}
         </ul>
         <div className="row">
           <button className="btn primary big" onClick={onNew}>
-            Play again
+            {t('ui.playAgain')}
           </button>
           <button className="btn ghost" onClick={onClose}>
-            Review chat
+            {t('salem.reviewChat')}
           </button>
           <button className="btn ghost" onClick={onMenu}>
-            Main menu
+            {t('ui.mainMenuPlain')}
           </button>
         </div>
       </div>

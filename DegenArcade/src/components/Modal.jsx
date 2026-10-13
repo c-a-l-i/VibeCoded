@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { t } from '../i18n/index.js'
 
 export default function Modal({ title, onClose, children, wide }) {
   useEffect(() => {
@@ -12,7 +13,7 @@ export default function Modal({ title, onClose, children, wide }) {
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <header className="modal-head">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" onClick={onClose} aria-label={t('ui.close')}>
             ✕
           </button>
         </header>

@@ -1,4 +1,5 @@
 import { RESOURCES, RES } from '../data.js'
+import { t, tx, N } from '../../i18n/index.js'
 
 export function Who({ p }) {
   return (
@@ -12,7 +13,8 @@ export function Who({ p }) {
 export function Thinking({ p }) {
   return (
     <div className="thinking">
-      <Who p={p} /> is thinking<span className="dots" />
+      {tx('ui.thinking', { p: <Who p={p} /> })}
+      <span className="dots" />
     </div>
   )
 }
@@ -22,7 +24,7 @@ export function Cost({ cost }) {
     <span className="st-cost">
       {RESOURCES.filter((r) => cost[r]).flatMap((r) =>
         Array.from({ length: cost[r] }, (_, i) => (
-          <span key={r + i} title={RES[r].name}>
+          <span key={r + i} title={N.res(r)}>
             {RES[r].icon}
           </span>
         )),
@@ -41,15 +43,15 @@ export function ResPicker({ value, onChange, max, disabled = {} }) {
         const cap = max ? max[r] : 99
         return (
           <div key={r} className={`st-pick ${n ? 'on' : ''}`} style={{ '--rc': RES[r].color }}>
-            <span className="st-pick-icon" title={RES[r].name}>
+            <span className="st-pick-icon" title={N.res(r)}>
               {RES[r].icon}
             </span>
             <span className="mono st-pick-n">{n}</span>
             <div className="st-pick-btns">
-              <button className="icon-btn" disabled={n <= 0} onClick={() => set(r, n - 1)} aria-label={`Less ${RES[r].name}`}>
+              <button className="icon-btn" disabled={n <= 0} onClick={() => set(r, n - 1)} aria-label={t('catan.less', { res: N.res(r) })}>
                 −
               </button>
-              <button className="icon-btn" disabled={n >= cap || disabled[r]} onClick={() => set(r, n + 1)} aria-label={`More ${RES[r].name}`}>
+              <button className="icon-btn" disabled={n >= cap || disabled[r]} onClick={() => set(r, n + 1)} aria-label={t('catan.more', { res: N.res(r) })}>
                 +
               </button>
             </div>

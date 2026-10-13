@@ -1,3 +1,5 @@
+import { t } from '../../i18n/index.js'
+
 // Hot-seat privacy screen: hides everything until the right person has the device.
 export default function Curtain({ state, pid, onReveal, onCancel }) {
   const p = state.players[pid]
@@ -5,15 +7,15 @@ export default function Curtain({ state, pid, onReveal, onCancel }) {
     <div className="ts-curtain">
       <div className="ts-curtain-card" style={{ '--c': p.color }}>
         <div className="ts-curtain-avatar">{p.avatar}</div>
-        <span className="eyebrow">{state.phase === 'night' ? `Night ${state.day}` : 'Private view'}</span>
-        <h1>Pass the device to {p.name}</h1>
-        <p className="muted">Everyone else, look away.</p>
+        <span className="eyebrow">{state.phase === 'night' ? t('salem.night', { n: state.day }) : t('salem.privateView')}</span>
+        <h1>{t('salem.passTo', { p: p.name })}</h1>
+        <p className="muted">{t('salem.lookAway')}</p>
         <button className="btn primary big" onClick={onReveal}>
-          I’m {p.name} — show me
+          {t('salem.showMe', { p: p.name })}
         </button>
         {state.phase !== 'night' && (
           <button className="btn ghost" onClick={onCancel}>
-            Cancel
+            {t('ui.cancel')}
           </button>
         )}
       </div>
