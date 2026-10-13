@@ -26,6 +26,9 @@ const TYPES = {
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
 const MAX_ROOMS = 500
 const ROOM_TTL = 60 * 60 * 1000 // rooms with nobody connected are dropped after an hour
+const TALK_KEEP = 100 // chat lines a room remembers for people who join or reconnect
+const TALK_BURST = 5 // chat lines one person can send…
+const TALK_WINDOW = 10 * 1000 // …in this many milliseconds
 
 // ---------- static files ----------
 
@@ -60,6 +63,7 @@ const send = (ws, msg) => ws && ws.readyState === 1 && ws.send(JSON.stringify(ms
 const fail = (ws, code, msg, v) => send(ws, { t: 'error', code, msg, ...(v ? { v } : {}) })
 const problem = (code, msg) => Object.assign(new Error(msg), { code })
 const cleanName = (n) => String(n ?? '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Anon'
+const cleanText = (x) => String(x ?? '').replace(/\p{Cc}/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 280)
 
 function newCode() {
   for (;;) {
@@ -103,6 +107,7 @@ function roomInfo(room, id) {
       pid: playerOf(room, m.id),
     })),
     offer: room.offer,
+    chat: { spectators: room.chatSpectators, muted: [...room.muted] },
     you: { id, seat: seatOf(room, id), pid: playerOf(room, id) },
   }
 }
@@ -200,6 +205,10 @@ function createRoom(id, name, game) {
     owners: new Map(),
     offer: null,
     sent: new Map(),
+    talk: [],
+    talkId: 0,
+    chatSpectators: true, // the host can turn spectator chat off
+    muted: new Set(), // client ids the host muted; kept if they leave and come back
     idleSince: null,
   }
   const count = g.listFor ? g.listFor(room.options).length : g.seats
@@ -311,6 +320,7 @@ function handle(ws, msg) {
       if (room) leaveRoom(room, id)
       const r = createRoom(id, ws.name, msg.game)
       ws.room = r.code
+      send(ws, { t: 'talk', msgs: [], reset: true })
       return sendRoom(r)
     }
     case 'join': {
@@ -323,6 +333,7 @@ function handle(ws, msg) {
       ws.room = r.code
       joinRoom(r, id, ws.name)
       r.idleSince = null
+      send(ws, { t: 'talk', msgs: r.talk, reset: true })
       sendRoom(r)
       return sendState(r, { force: true })
     }
@@ -342,8 +353,9 @@ function handle(ws, msg) {
       break
   }
   if (!room) return fail(ws, 'notInRoom', 'You’re not in a room')
-  // If the host has dropped off, whoever reaches for a host control takes over.
-  if (room.host !== id && sockets.get(room.host)?.room !== room.code) room.host = id
+  // If the host has dropped off, whoever reaches for a host control takes over. Chatting doesn't count,
+  // and someone the host muted can't take over and unmute themselves.
+  if (room.host !== id && sockets.get(room.host)?.room !== room.code && msg.t !== 'talk' && !room.muted.has(id)) room.host = id
   const isHost = room.host === id
   const g = GAMES[room.game]
   const hostOnly = () => (isHost ? true : (fail(ws, 'hostOnly', 'Only the host can do that.'), false))
@@ -456,6 +468,41 @@ function handle(ws, msg) {
       const next = g.hostAct(room.state, msg.action)
       if (next) commit(room, next)
       return
+    }
+    case 'talk': {
+      // Room chat for everyone, seated or watching, within the host's rules: whether spectators may talk, and who's
+      // muted. The host can always talk. Town of Solana's own chat has rules (night rooms, the dead), so while it's
+      // being played this channel stays shut.
+      if (g.chat && room.status === 'playing') return
+      const text = cleanText(msg.text)
+      const m = memberOf(room, id)
+      if (!text || !m) return
+      const watching = room.status === 'playing' ? playerOf(room, id) === null : seatOf(room, id) < 0
+      if (room.muted.has(id) && !isHost) return fail(ws, 'muted', 'The host muted you.')
+      if (watching && !isHost && !room.chatSpectators) return fail(ws, 'quiet', 'Only players can chat right now.')
+      const now = Date.now()
+      m.said = (m.said ?? []).filter((at) => now - at < TALK_WINDOW)
+      if (m.said.length >= TALK_BURST) return fail(ws, 'slow', 'Slow down a little.')
+      m.said.push(now)
+      const pid = room.status === 'playing' ? playerOf(room, id) : null
+      const p = pid !== null ? room.state?.players[pid] : null
+      // `spectator` lines are hidden while spectator chat is off.
+      const line = { id: ++room.talkId, from: id, name: p?.name ?? m.name, token: p?.token ?? null, color: p?.color ?? null, spectator: watching && !isHost, text }
+      room.talk = [...room.talk.slice(1 - TALK_KEEP), line]
+      for (const x of online(room)) send(sockets.get(x.id), { t: 'talk', msgs: [line] })
+      return
+    }
+    case 'chatRules':
+      // Host lets spectators chat, or not. Their lines are hidden while it's off.
+      if (!hostOnly()) return
+      room.chatSpectators = !!msg.spectators
+      return sendRoom(room)
+    case 'mute': {
+      // Host mutes or unmutes someone in the room. A muted person's lines are hidden for everyone.
+      if (!hostOnly() || typeof msg.id !== 'string' || msg.id === id || !room.members.has(msg.id)) return
+      if (msg.on) room.muted.add(msg.id)
+      else room.muted.delete(msg.id)
+      return sendRoom(room)
     }
     case 'takeover': {
       // Host hands a disconnected player's seat to a bot.

@@ -67,14 +67,15 @@ function PlayerCard({ state, p, openModal }) {
   )
 }
 
-export default function Sidebar({ state, openModal, onQuit, onMenu }) {
+// `chat` is the online room chat, shown under the activity log.
+export default function Sidebar({ state, openModal, onQuit, onMenu, chat = null }) {
   const logRef = useRef(null)
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' })
   }, [state.log.length])
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${chat ? 'has-talk' : ''}`}>
       <div className="panel">
         <div className="panel-head">
           <h2>{t('ui.players')}</h2>
@@ -117,6 +118,7 @@ export default function Sidebar({ state, openModal, onQuit, onMenu }) {
           ))}
         </ul>
       </div>
+      {chat}
     </aside>
   )
 }

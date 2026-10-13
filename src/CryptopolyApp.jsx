@@ -89,7 +89,7 @@ export default function CryptopolyApp({ onMenu, net = null }) {
         <Board state={state} onSpaceClick={(id) => setModal({ type: 'deed', id })}>
           <Center state={state} rolling={rolling} act={act} openModal={setModal} />
         </Board>
-        <Sidebar state={state} openModal={setModal} onQuit={quit} onMenu={onMenu} />
+        <Sidebar state={state} openModal={setModal} onQuit={quit} onMenu={onMenu} chat={net?.chat} />
       </main>
 
       {modal?.type === 'deed' && <DeedModal state={state} id={modal.id} onClose={() => setModal(null)} />}

@@ -6,6 +6,7 @@ import RoleListPicker from '../salem/components/RoleListPicker.jsx'
 import CryptopolyApp from '../CryptopolyApp.jsx'
 import CatanApp from '../catan/CatanApp.jsx'
 import SalemApp from '../salem/SalemApp.jsx'
+import TableTalk, { SpectatorChat } from './TableTalk.jsx'
 import './online.css'
 import { CornerTools } from '../components/LanguageButton.jsx'
 import { t, tx, look, N, tradeSide, bagText } from '../i18n/index.js'
@@ -169,6 +170,12 @@ function Lobby({ n }) {
             <p className="small muted">{t('online.watchingList', { list: watching.map((m) => m.name + (m.online ? '' : t('online.offlineTail'))).join(', ') })}</p>
           )}
 
+          {!salem && (
+            <div className="on-options">
+              <SpectatorChat room={room} />
+            </div>
+          )}
+
           {salem && (
             <div className="on-options">
               <h2>{t('salem.roleList')}</h2>
@@ -318,6 +325,8 @@ function Game({ n }) {
     paused: room.paused,
     pause: (on) => net.send({ t: 'pause', on }),
     pace: (pace) => net.send({ t: 'host', action: { type: 'PACE', pace } }),
+    // Town of Solana has its own chat, with rooms and rules; the board games share this one.
+    chat: room.game !== 'salem' ? <TableTalk talk={n.talk} room={room} players={n.state?.players} /> : null,
     toLobby: () => {
       if (!isHost) return alert(t('online.hostOnlyNew'))
       if (n.state?.phase === 'gameover' || confirm(t('online.endConfirm'))) net.send({ t: 'lobby' })

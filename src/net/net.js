@@ -38,6 +38,7 @@ let snap = {
   room: null,
   state: null,
   chat: [],
+  talk: [], // room chat for the board games; Town of Solana's in-game chat is `chat`
   clock: null,
   error: null,
   // A playful default so you can host right away; change it any time.
@@ -89,13 +90,16 @@ function connect() {
       case 'chat':
         set({ chat: m.reset ? m.msgs : [...snap.chat, ...m.msgs] })
         break
+      case 'talk':
+        set({ talk: m.reset ? m.msgs : [...snap.talk, ...m.msgs].slice(-100) })
+        break
       case 'clock':
         set({ clock: { clock: m.clock, dur: m.dur } })
         break
       case 'gone':
         wanted = null
         store(ROOM_KEY, null)
-        set({ room: null, state: null, chat: [], clock: null, error: problem(m) })
+        set({ room: null, state: null, chat: [], talk: [], clock: null, error: problem(m) })
         break
       case 'error':
         set({ error: problem(m) })
@@ -138,7 +142,7 @@ export const net = {
     wanted = null
     store(ROOM_KEY, null)
     send({ t: 'leave' })
-    set({ room: null, state: null, chat: [], clock: null })
+    set({ room: null, state: null, chat: [], talk: [], clock: null })
   },
   rename(name) {
     store(NAME_KEY, name)
@@ -147,6 +151,7 @@ export const net = {
   },
   send,
   act: (action) => send({ t: 'act', action }),
+  talk: (text) => send({ t: 'talk', text }),
   clearError: () => set({ error: null }),
   // Rejoin the last room after a refresh.
   resume() {

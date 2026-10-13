@@ -126,7 +126,7 @@ export default function CatanApp({ onMenu, net = null }) {
           </section>
           <Console state={state} rolling={rolling} act={act} mode={activeMode} setMode={setMode} openModal={setModal} />
         </div>
-        <Sidebar state={state} viewer={viewer} onQuit={quit} onMenu={onMenu} />
+        <Sidebar state={state} viewer={viewer} onQuit={quit} onMenu={onMenu} chat={net?.chat} />
       </main>
 
       {modal?.type === 'trade' && state.phase === 'main' && <TradeModal state={state} act={act} onClose={() => setModal(null)} />}
