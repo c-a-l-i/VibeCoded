@@ -1,14 +1,14 @@
 // Bots for Town of Solana. Each bot reads the public record (claims, reported results, dead man's switches,
 // trial votes) plus its own night results, forms an opinion of every player, and talks, votes and acts on it.
 // Every function returns actions for the engine to apply; bots only write to their own memo directly.
-import { ROLES, ROLE_KEYS, INV_GROUPS, COVERS, SLOTS, invGroup, groupText } from './roles.js'
+import { ROLES, ROLE_KEYS, INV_GROUPS, COVERS, SLOTS, invGroup } from './roles.js'
 import { living, isCabal, sameTeam, tally, votesNeeded, nightInfo, grave, blackmailed } from './rules.js'
+import en from '../i18n/en.js'
 
 const rand = (a, b) => a + Math.random() * (b - a)
 const chance = (p) => Math.random() < p
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x))
-const fill = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '')
 function best(items, score) {
   let out = null
   let top = -Infinity
@@ -21,49 +21,14 @@ function best(items, score) {
   }
   return out
 }
-const SAY = (pid, text, data = null, room = 'town') => ({ type: 'SAY', pid, room, text, data })
-const nm = (s, pid) => s.players[pid].name
 
 // ---------- lines ----------
 
-const L = {
-  greet: [
-    'gm', 'gm frens', 'gm gm ☀️', 'wagmi', 'ser this is a casino', 'who let the Cabal in', 'Custodian don’t claim yet',
-    'Auditors pls audit everyone', 'stay safe tonight frens', 'not financial advice but trust no one', 'lfg', 'hi', 'already smells like a rug in here',
-    'imagine being Cabal lol', 'pls no rug', 'ngmi if we don’t find them fast', 'Core Devs, patch the important people', 'probably nothing',
-  ],
-  chatter: [
-    'we need claims', 'any Sleuth results?', 'Oracle, what are the dead saying?', 'don’t waste votes', 'who hasn’t claimed yet?',
-    'someone here is definitely Cabal', 'read the switches, people', 'this town is cooked', 'nobody vote randomly', 'zoom out',
-    'my portfolio is down and so is this town', 'trust the process', 'hmm', 'quiet ones are always Cabal', 'few understand',
-  ],
-  rip: ['rip {X}', 'rip {X} 💀', '{X} got rugged', 'press F for {X}', 'not {X} 😭', 'rest easy {X}', 'gn {X}', 'F'],
-  claim: ['I’m the {R}.', 'Claiming {R}.', '{R} here.', 'fine. I’m {R}.', 'I’m {R}, chill.', 'lol I’m the {R}.'],
-  update: ['{R} results:', 'More from the {R}:', 'Update from the {R}:'],
-  counter: ['{X} is lying — I’m the real {R}.', 'Counterclaim! I’m the {R}, {X} is fake.', '{X} is NOT the {R}. I am.'],
-  defend: ['I’m the {R}, I swear.', 'I’m {R}! Don’t slash a Town member.', '{R}. Check my switch when I’m gone.', 'You’re making a mistake, I’m {R}.'],
-  accuse: [
-    '{X} is sus', 'vote {X}', '{X} is giving rug vibes', 'slash {X}', 'I don’t trust {X}', '{X} has been way too quiet',
-    '{X} is Cabal, calling it', 'something’s off about {X}', '{X} smells like a VC', '{X} is lying',
-  ],
-  ask: ['{X} claim?', '{X}, what’s your role?', '{X} who are you', 'claim {X}', '{X} speak up'],
-  vouch: ['{X} seems town to me', 'leave {X} alone', '{X} is fine', 'I trust {X}'],
-  again: ['I already claimed {R}.', 'I told you, {R}.', 'still {R}, read the chat'],
-  noClaim: ['not claiming yet', 'later', 'I’d rather not say yet'],
-  guilty: ['guilty', 'guilty, sorry', 'slash', 'g'],
-  inno: ['inno', 'innocent', 'they’re fine', 'inno for now'],
-  lastTown: ['you’re slashing a {R}. gg', 'remember this when the Cabal wins', 'I was town 😭', 'ngmi', 'check my switch'],
-  lastEvil: ['gg', 'wagmi… not', 'rekt', 'it was fun while it lasted', 'see you never'],
-  lastJester: ['🤡🤡🤡', 'lmao get haunted', 'thanks for the slash, nerds'],
-  jesterTalk: ['I’m not the Shitposter, trust me bro', 'vote me if you dare', 'lol', 'I could be anything', 'what if I’m Cabal 👀'],
-  whale: ['🐋 I’m the Whale. Revealing.', '🐋 Whale here. Follow my votes.'],
-  card: {
-    cabal: ['gm. you’re rekt. — the Cabal', 'funds are SAFU… not yours though', 'rug pulled ✨', 'should’ve sold the top', 'nothing personal, just business 💼'],
-    serialKiller: ['exploit successful 💀', 're-entrancy bug lol', 'your keys, my coins'],
-    arsonist: ['approval granted 🕳️', 'you signed it, not me'],
-    werewolf: ['🌕 awoo', 'LUNA to zero 🌕'],
-  },
-}
+// What bots say is a list of message parts (salem.msg.*) that every player reads in their own language.
+// A pool part also carries which line `i` the bot picked; the English pools set how many lines there are.
+const POOLS = en.salem.msg
+const line = (k, v) => ({ k, i: Math.floor(Math.random() * POOLS[k].length), ...(v ? { v } : {}) })
+const SAY = (pid, tr, data = null, room = 'town') => ({ type: 'SAY', pid, room, tr, data })
 
 // ---------- alignment ----------
 
@@ -364,40 +329,36 @@ function fakeResults(s, B) {
   return m.fakeResults
 }
 
-const PAST = {
-  doctor: 'patched', bodyguard: 'guarded', escort: 'distracted', transporter: 'mixed', vigilante: 'hacked back',
-  vampireHunter: 'checked', lookout: 'watched', spy: 'bugged', sheriff: 'audited', investigator: 'traced', retributionist: 'revived',
-}
+// Roles that report who they visited ("N2: patched Bob").
+const PAST = new Set(Object.keys(en.salem.msg.rDid))
 
-// One result as a short line plus the structured reports it makes.
+// One result as a short line (a message part) plus the structured reports it makes.
 function describe(s, role, r) {
-  const X = r.target !== undefined && r.target !== null ? nm(s, r.target) : ''
-  const n = `N${r.night}`
+  const v = { n: r.night, x: r.target }
   switch (r.kind) {
     case 'sus':
-      return { imp: 3, text: `${n}: ${X} SUS 🚩`, reports: [{ kind: 'sus', target: r.target }] }
+      return { imp: 3, part: { k: 'rSus', v }, reports: [{ kind: 'sus', target: r.target }] }
     case 'inno':
-      return { imp: opinion(s, null, r.target) < -0.2 ? 2.2 : 0.8, text: `${n}: ${X} clean ✅`, reports: [{ kind: 'inno', target: r.target }] }
+      return { imp: opinion(s, null, r.target) < -0.2 ? 2.2 : 0.8, part: { k: 'rClean', v }, reports: [{ kind: 'inno', target: r.target }] }
     case 'group': {
       const sc = groupScore(s, r.value, r.target)
-      return { imp: sc < -0.3 ? 3 : 0.8, text: `${n}: ${X} → ${groupText(r.value)}`, reports: [{ kind: 'group', target: r.target, value: r.value }] }
+      return { imp: sc < -0.3 ? 3 : 0.8, part: { k: 'rGroup', v: { ...v, inv: r.value } }, reports: [{ kind: 'group', target: r.target, value: r.value }] }
     }
     case 'visitors': {
       const g = grave(s, r.target)
       const died = g && g.when === 'night' && g.day === r.night
-      const who = r.value.length ? r.value.map((v) => nm(s, v)).join(', ') : 'nobody'
       return {
         imp: died && r.value.length ? 3 : 0.4,
-        text: `${n}: watched ${X}, ${who} visited`,
-        reports: died ? r.value.map((v) => ({ kind: 'visitedDead', target: v })) : [],
+        part: r.value.length ? { k: 'rWatched', v: { ...v, ps: r.value } } : { k: 'rWatchedNone', v },
+        reports: died ? r.value.map((x) => ({ kind: 'visitedDead', target: x })) : [],
       }
     }
     case 'cabalVisits':
-      return r.value.length ? { imp: 1, text: `${n}: Cabal visited ${r.value.map((v) => nm(s, v)).join(', ')}`, reports: [] } : null
+      return r.value.length ? { imp: 1, part: { k: 'rCabal', v: { n: r.night, ps: r.value } }, reports: [] } : null
     case 'vamp':
-      return { imp: 3, text: `${n}: ${X} is a Maxi 🧛`, reports: [{ kind: 'evil', target: r.target }] }
+      return { imp: 3, part: { k: 'rMaxi', v }, reports: [{ kind: 'evil', target: r.target }] }
     case 'did':
-      return PAST[role] && r.target !== undefined ? { imp: 0.3, text: `${n}: ${PAST[role]} ${X}`, reports: [] } : null
+      return PAST.has(role) && r.target !== undefined ? { imp: 0.3, part: { k: `rDid.${role}`, v }, reports: [] } : null
     default:
       return null
   }
@@ -417,48 +378,48 @@ function pending(s, B) {
   for (const [i, x] of B.memo.relay.entries()) {
     const key = `relay:${i}`
     if (B.memo.shared.includes(key)) continue
-    const what = { sus: 'SUS', inno: 'clean', evil: 'evil', visitedDead: 'seen at a murder' }[x.kind] ?? (x.kind === 'group' ? `one of ${groupText(x.value)}` : null)
-    if (!what) continue
-    out.push({ key, imp: 2.5, text: `the dead say ${nm(s, x.target)} is ${what}`, reports: [{ ...x, relay: true }] })
+    const k = { sus: 'relaySus', inno: 'relayClean', evil: 'relayEvil', visitedDead: 'relaySeen', group: 'relayGroup' }[x.kind]
+    if (!k) continue
+    const v = x.kind === 'group' ? { x: x.target, inv: x.value } : { x: x.target }
+    out.push({ key, imp: 2.5, part: { k, v }, reports: [{ ...x, relay: true }] })
   }
   return out
 }
 
-// A claim plus results, as one chat message. Exported so humans get the same one-click "share my results".
+// A claim plus results, as one chat message ({ tr, data }). Exported so humans get the same one-click "share my results".
 export function claimMessage(s, pid, { defense = false, all = false, forced = false, keep = false } = {}) {
   const B = s.players[pid]
   B.memo.answered = s.nextId
   const role = B.isAI ? claimRole(s, B, { forced: forced || defense }) : B.role
-  if (!role) return { text: pick(L.noClaim), data: null }
+  if (!role) return { tr: [line('noClaim')], data: null }
   const list = pending(s, B)
     .filter((x) => all || defense || x.imp >= 2 || !B.isAI)
     .slice(-5)
   if (!keep) B.memo.shared.push(...list.map((x) => x.key))
   const again = s.claims[pid]?.role === role && !defense
-  const lines = defense ? L.defend : again ? L.update : L.claim
-  const head = fill(pick(lines), { R: ROLES[role].name })
+  const head = line(defense ? 'defend' : again ? 'update' : 'claim', { role })
   return {
-    text: list.length ? `${head} ${list.map((x) => x.text).join(' · ')}` : head,
+    tr: [head, ...list.map((x) => x.part)],
     data: { claim: role, reports: list.flatMap((x) => x.reports) },
   }
 }
 
-// Dead man's switch text plus the reports it carries once revealed.
+// Dead man's switch, one message part per line, plus the reports it carries once revealed.
 export function willFor(s, pid) {
   const B = s.players[pid]
   const town = mind(B) === 'town'
   const role = town || !B.isAI ? B.role : claimRole(s, B, { forced: true })
   const list = town || !B.isAI ? B.memo.results : fakeResults(s, B)
-  const lines = [`${ROLES[role].icon} ${ROLES[role].name}`]
+  const tr = [{ k: 'willRole', v: { roleIcon: role } }]
   const reports = []
   for (const r of list) {
     const d = describe(s, role, r)
     if (!d) continue
-    lines.push(d.text)
+    tr.push(d.part)
     reports.push(...d.reports)
   }
-  if (B.role === 'survivor') lines.push(`${4 - B.uses.vests} cold wallets used`)
-  return { text: lines.join('\n'), reports }
+  if (B.role === 'survivor') tr.push({ k: 'vestsUsed', v: { n: 4 - B.uses.vests } })
+  return { tr, reports }
 }
 
 // ---------- start / phases ----------
@@ -476,14 +437,15 @@ export function dayStart(s) {
     if (!B.isAI || !B.alive) continue
     const w = willFor(s, B.id)
     B.willData = w.reports
-    out.push({ type: 'WILL', pid: B.id, text: w.text })
+    out.push({ type: 'WILL', pid: B.id, text: '', tr: w.tr })
   }
   for (const g of s.morning?.deaths ?? []) {
     const p = s.players[g.pid]
     if (!p.isAI) continue
     const w = willFor(s, p.id)
     const truth = mind(p) === 'town'
-    out.push(SAY(p.id, `I was the ${ROLES[p.role].name}.${truth && w.reports.length ? ' ' + w.text.split('\n').slice(1).join(' · ') : ''}`, truth ? { reports: w.reports } : null, 'dead'))
+    const results = truth && w.reports.length ? w.tr.slice(1) : []
+    out.push(SAY(p.id, [{ k: 'iWas', v: { role: p.role } }, ...results], truth ? { reports: w.reports } : null, 'dead'))
   }
   return out
 }
@@ -498,7 +460,7 @@ export function beforeNight(s) {
     }
     const w = willFor(s, B.id)
     B.willData = w.reports
-    out.push({ type: 'WILL', pid: B.id, text: w.text })
+    out.push({ type: 'WILL', pid: B.id, text: '', tr: w.tr })
   }
   return out
 }
@@ -554,7 +516,7 @@ function act(s, b) {
       return talk(s, b)
     case 'morning': {
       const d = s.morning?.deaths ?? []
-      return d.length && chance(0.3) ? [SAY(b, fill(pick(L.rip), { X: nm(s, pick(d).pid) }))] : []
+      return d.length && chance(0.3) ? [SAY(b, [line('rip', { x: pick(d).pid })])] : []
     }
     case 'voting':
       return [...vote(s, b), ...(chance(0.35) ? talk(s, b) : [])]
@@ -581,14 +543,14 @@ function talk(s, b) {
   if (blackmailed(s, b)) {
     if (m.said[`bm${day}`]) return []
     m.said[`bm${day}`] = 1
-    return [SAY(b, 'I am blackmailed.')]
+    return [SAY(b, [{ k: 'blackmailed' }])]
   }
   const k = mind(B)
   const live = living(s).filter((p) => p.id !== b)
 
   // The Whale reveals when it would help.
   if (B.role === 'mayor' && !B.revealed && day >= 2 && (underFire(s, b) || chance(0.3)))
-    return [{ type: 'REVEAL', pid: b }, SAY(b, pick(L.whale))]
+    return [{ type: 'REVEAL', pid: b }, SAY(b, [line('whale')])]
 
   // Call out anyone faking my one-of-a-kind role.
   if (k === 'town' && capacity(s, B.role) <= 1) {
@@ -597,7 +559,7 @@ function talk(s, b) {
       m.said[`cc${fake.id}`] = 1
       const msg = claimMessage(s, b, { forced: true, all: true })
       const data = { ...msg.data, reports: [...(msg.data?.reports ?? []), { kind: 'accuse', target: fake.id }] }
-      return [SAY(b, `${fill(pick(L.counter), { X: fake.name, R: ROLES[B.role].name })} ${msg.text.replace(/^[^.!:]*[.!:]\s*/, '')}`.trim(), data)]
+      return [SAY(b, [line('counter', { x: fake.id, role: B.role }), ...msg.tr.slice(1)], data)]
     }
   }
 
@@ -607,10 +569,10 @@ function talk(s, b) {
       const forced = opinion(s, null, b) < -0.15 || day >= 3 || !!m.said[`nc${day}`]
       m.said[`nc${day}`] = 1
       const msg = claimMessage(s, b, { forced })
-      return [SAY(b, msg.text, msg.data)]
+      return [SAY(b, msg.tr, msg.data)]
     }
     m.answered = s.nextId
-    return [SAY(b, fill(pick(L.again), { R: ROLES[s.claims[b].role].name }))]
+    return [SAY(b, [line('again', { role: s.claims[b].role })])]
   }
 
   // Share fresh results.
@@ -619,7 +581,7 @@ function talk(s, b) {
   const wants = k === 'town' ? big.length && chance(0.9) : (k === 'evil' || k === 'exe') && big.length && day >= 2 && chance(0.35)
   if (wants && (k !== 'town' || B.role !== 'jailor')) {
     const msg = claimMessage(s, b)
-    return [SAY(b, msg.text, msg.data)]
+    return [SAY(b, msg.tr, msg.data)]
   }
 
   if (k === 'town') {
@@ -628,48 +590,50 @@ function talk(s, b) {
     const pile = s.reports.filter((r) => r.target === t && r.day === day && r.kind === 'accuse').length
     if (t !== null && v < -0.45 && !m.said[`acc${day}:${t}`] && (pile < 3 || chance(0.3))) {
       m.said[`acc${day}:${t}`] = 1
-      return [SAY(b, fill(pick(L.accuse), { X: nm(s, t) }), { reports: [{ kind: 'accuse', target: t }] })]
+      return [SAY(b, [line('accuse', { x: t })], { reports: [{ kind: 'accuse', target: t }] })]
     }
     const quiet = scored.filter(([x, o]) => !s.claims[x] && o < -0.1 && !s.players[x].revealed)
     if (quiet.length && chance(0.5) && !m.said[`ask${day}:${quiet[0][0]}`]) {
       m.said[`ask${day}:${quiet[0][0]}`] = 1
-      return [SAY(b, fill(pick(L.ask), { X: nm(s, quiet[0][0]) }), { asks: [quiet[0][0]] })]
+      return [SAY(b, [line('ask', { x: quiet[0][0] })], { asks: [quiet[0][0]] })]
     }
   } else if (k === 'evil') {
     const outs = live.filter((p) => !allied(B, p))
     const t = best(outs, (p) => -opinion(s, null, p.id))
     if (t && opinion(s, null, t.id) < -0.2 && chance(0.6) && !m.said[`acc${day}:${t.id}`]) {
       m.said[`acc${day}:${t.id}`] = 1
-      return [SAY(b, fill(pick(L.accuse), { X: t.name }), { reports: [{ kind: 'accuse', target: t.id }] })]
+      return [SAY(b, [line('accuse', { x: t.id })], { reports: [{ kind: 'accuse', target: t.id }] })]
     }
     const pal = live.find((p) => p.id !== b && allied(B, p) && opinion(s, null, p.id) < -0.35)
     if (pal && chance(0.3) && !m.said[`vouch${day}:${pal.id}`]) {
       m.said[`vouch${day}:${pal.id}`] = 1
-      return [SAY(b, fill(pick(L.vouch), { X: pal.name }), { reports: [{ kind: 'vouch', target: pal.id }] })]
+      return [SAY(b, [line('vouch', { x: pal.id })], { reports: [{ kind: 'vouch', target: pal.id }] })]
     }
     if (day >= 2 && chance(0.12)) {
       const r = pick(outs.filter((p) => !s.claims[p.id]).length ? outs.filter((p) => !s.claims[p.id]) : outs)
       if (r && !m.said[`acc${day}:${r.id}`]) {
         m.said[`acc${day}:${r.id}`] = 1
-        return [SAY(b, fill(pick(L.accuse), { X: r.name }), { reports: [{ kind: 'accuse', target: r.id }] })]
+        return [SAY(b, [line('accuse', { x: r.id })], { reports: [{ kind: 'accuse', target: r.id }] })]
       }
     }
   } else if (k === 'exe' && B.target !== null && s.players[B.target].alive && day >= 2 && !m.said[`acc${day}:${B.target}`]) {
     m.said[`acc${day}:${B.target}`] = 1
-    return [SAY(b, fill(pick(L.accuse), { X: nm(s, B.target) }), { reports: [{ kind: 'accuse', target: B.target }] })]
+    return [SAY(b, [line('accuse', { x: B.target })], { reports: [{ kind: 'accuse', target: B.target }] })]
   } else if (k === 'jester' && chance(0.4)) {
     if (!s.claims[b] && day >= 2 && chance(0.5)) {
       const msg = claimMessage(s, b)
-      return [SAY(b, msg.text, msg.data)]
+      return [SAY(b, msg.tr, msg.data)]
     }
-    return [SAY(b, pick(L.jesterTalk))]
+    return [SAY(b, [line('jesterTalk')])]
   }
 
   const p = day === 1 ? 0.55 : m.said[tk] <= 2 ? 0.2 : 0.06
   if (!chance(p)) return []
-  const recent = new Set(s.chat.slice(-30).map((x) => x.text))
-  const fresh = (day === 1 ? L.greet : L.chatter).filter((x) => !recent.has(x))
-  return fresh.length ? [SAY(b, pick(fresh))] : []
+  // Small talk, skipping lines someone said recently.
+  const k2 = day === 1 ? 'greet' : 'chatter'
+  const recent = new Set(s.chat.slice(-30).map((x) => x.tr?.[0] && `${x.tr[0].k}:${x.tr[0].i}`))
+  const fresh = POOLS[k2].map((_, i) => i).filter((i) => !recent.has(`${k2}:${i}`))
+  return fresh.length ? [SAY(b, [{ k: k2, i: pick(fresh) }])] : []
 }
 
 function vote(s, b) {
@@ -708,10 +672,10 @@ function defense(s, b) {
   const B = s.players[b]
   B.memo.said[`def${s.day}:${s.trial.n}`] = 1
   if (blackmailed(s, b)) return []
-  if (B.role === 'mayor' && !B.revealed) return [{ type: 'REVEAL', pid: b }, SAY(b, 'I’m the Whale. Revealing now — check the announcement.')]
-  if (B.role === 'jester') return [SAY(b, pick(L.jesterTalk))]
+  if (B.role === 'mayor' && !B.revealed) return [{ type: 'REVEAL', pid: b }, SAY(b, [{ k: 'whaleDefense' }])]
+  if (B.role === 'jester') return [SAY(b, [line('jesterTalk')])]
   const msg = claimMessage(s, b, { defense: true })
-  return [SAY(b, msg.text, msg.data)]
+  return [SAY(b, msg.tr, msg.data)]
 }
 
 // A bot's verdict on whoever is on trial: 'guilty' | 'innocent' | 'abstain'.
@@ -735,16 +699,16 @@ function judge(s, b) {
   if (s.trial?.accused === b || s.judge[b]) return []
   const v = verdictFor(s, b)
   const out = [{ type: 'JUDGE', pid: b, verdict: v }]
-  if (v !== 'abstain' && chance(0.15) && !blackmailed(s, b)) out.push(SAY(b, pick(v === 'guilty' ? L.guilty : L.inno)))
+  if (v !== 'abstain' && chance(0.15) && !blackmailed(s, b)) out.push(SAY(b, [line(v === 'guilty' ? 'saysGuilty' : 'saysInno')]))
   return out
 }
 
 function lastWords(s, b) {
   const B = s.players[b]
   if (blackmailed(s, b)) return []
-  if (B.role === 'jester') return [SAY(b, pick(L.lastJester))]
-  if (mind(B) === 'town') return [SAY(b, fill(pick(L.lastTown), { R: ROLES[B.role].name }))]
-  return [SAY(b, pick(L.lastEvil))]
+  if (B.role === 'jester') return [SAY(b, [line('lastJester')])]
+  if (mind(B) === 'town') return [SAY(b, [line('lastTown', { role: B.role })])]
+  return [SAY(b, [line('lastEvil')])]
 }
 
 // ---------- night ----------
@@ -756,13 +720,13 @@ function nightTalk(s, b) {
   if (!j) return []
   if (j.jailor === b && !m.said[`jq${s.day}`]) {
     m.said[`jq${s.day}`] = 1
-    return [SAY(b, pick(['You’re in Cold Storage. Who are you?', 'Claim. Now.', 'Talk. What’s your role?']), null, 'jail')]
+    return [SAY(b, [line('jailAsk')], null, 'jail')]
   }
   const asked = s.chat.some((x) => x.room === 'jail' && x.day === s.day && x.from === j.jailor)
   if (j.prisoner === b && !m.said[`ja${s.day}`] && (asked || s.clock > 5000)) {
     m.said[`ja${s.day}`] = 1
     const msg = claimMessage(s, b, { forced: true, all: true, keep: true })
-    return [SAY(b, msg.text, msg.data, 'jail')]
+    return [SAY(b, msg.tr, msg.data, 'jail')]
   }
   return []
 }
@@ -808,22 +772,23 @@ export function planNight(s) {
   const humanBoss = cabal.some((p) => p.role === 'godfather' && !p.isAI)
   for (const B of cabalBots) {
     const a = plans[B.id]
-    const T = a?.t?.[0] !== undefined ? nm(s, a.t[0]) : null
-    let line = null
-    if ((B.role === 'godfather' || (B.role === 'mafioso' && !cabal.some((p) => p.role === 'godfather'))) && kill !== null) line = `Rugging ${nm(s, kill)} tonight 🔪`
-    else if (B.role === 'mafioso' && humanBoss && kill !== null) line = `Boss, I’d rug ${nm(s, kill)}.`
-    else if (B.role === 'framer' && T) line = `FUDding ${T} 🗞️`
-    else if (B.role === 'blackmailer' && T) line = `Doxxing ${T} 📸`
-    else if (B.role === 'consort' && T) line = `Shilling ${T} so they stay busy 📢`
-    else if (B.role === 'janitor' && T) line = `I’ll launder ${T} if they go down 🧼`
-    else if (B.role === 'forger' && T) line = `Spoofing ${T}’s switch ✍️`
-    else if (B.role === 'disguiser' && a) line = `Dressing ${nm(s, a.t[0])} up as ${nm(s, a.t[1])} 🧦`
-    else if (B.role === 'consigliere' && T) line = `Snooping on ${T} 🤫`
-    if (line) out.push(SAY(B.id, line, null, 'cabal'))
-    if (s.day === 1) out.push(SAY(B.id, `If anyone asks, I’m the ${ROLES[claimRole(s, B, { forced: true })].name}.`, null, 'cabal'))
+    const T = a?.t?.[0]
+    const has = T !== undefined
+    let plan = null
+    if ((B.role === 'godfather' || (B.role === 'mafioso' && !cabal.some((p) => p.role === 'godfather'))) && kill !== null) plan = { k: 'planKill', v: { x: kill } }
+    else if (B.role === 'mafioso' && humanBoss && kill !== null) plan = { k: 'planBoss', v: { x: kill } }
+    else if (B.role === 'framer' && has) plan = { k: 'planFrame', v: { x: T } }
+    else if (B.role === 'blackmailer' && has) plan = { k: 'planDox', v: { x: T } }
+    else if (B.role === 'consort' && has) plan = { k: 'planShill', v: { x: T } }
+    else if (B.role === 'janitor' && has) plan = { k: 'planLaunder', v: { x: T } }
+    else if (B.role === 'forger' && has) plan = { k: 'planSpoof', v: { x: T } }
+    else if (B.role === 'disguiser' && a) plan = { k: 'planDisguise', v: { x: a.t[0], y: a.t[1] } }
+    else if (B.role === 'consigliere' && has) plan = { k: 'planSnoop', v: { x: T } }
+    if (plan) out.push(SAY(B.id, [plan], null, 'cabal'))
+    if (s.day === 1) out.push(SAY(B.id, [{ k: 'planCover', v: { role: claimRole(s, B, { forced: true }) } }], null, 'cabal'))
   }
   const youngest = [...vamps].sort((a, b) => b.vampAge - a.vampAge)[0]
-  if (youngest?.isAI && bite !== null) out.push(SAY(youngest.id, `Orange-pilling ${nm(s, bite)} tonight 🧡`, null, 'vamp'))
+  if (youngest?.isAI && bite !== null) out.push(SAY(youngest.id, [{ k: 'planBite', v: { x: bite } }], null, 'vamp'))
   return out
 }
 
@@ -901,7 +866,7 @@ function nightChoice(s, B, { kill, bite }) {
       return kill !== null && T0.includes(kill) && threat(s, b, kill) > 2.4 ? one(kill) : null
     case 'forger':
       return kill !== null && T0.includes(kill) && threat(s, b, kill) > 2.4 && chance(0.7)
-        ? { t: [kill], forgeRole: 'jester', forgeWill: '🤡 Shitposter\nlol you all fell for it' }
+        ? { t: [kill], forgeRole: 'jester', forgeWill: '', forgeWillTr: [{ k: 'willRole', v: { roleIcon: 'jester' } }, { k: 'forgedLol' }] }
         : null
     case 'disguiser': {
       const killer = s.players.find((p) => p.alive && p.role === 'mafioso') ?? s.players.find((p) => p.alive && p.role === 'godfather')
@@ -951,15 +916,13 @@ export function endNight(s) {
     if (overCapacity(s, j.prisoner, jc)) v -= 0.5
   }
   const exec = v < -0.35 + urgency(s) * 0.5
-  const line = exec
-    ? pick(['Liquidating you.', 'Sorry, you’re getting liquidated.', 'Your funds are frozen. Permanently.'])
-    : pick(['You’ll live. For now.', 'Fine. You walk.', 'Don’t make me regret this.'])
-  return [SAY(J.id, line, null, 'jail'), ...(exec ? [{ type: 'EXECUTE', pid: J.id, on: true }] : [])]
+  return [SAY(J.id, [line(exec ? 'jailExec' : 'jailSpare')], null, 'jail'), ...(exec ? [{ type: 'EXECUTE', pid: J.id, on: true }] : [])]
 }
 
+// A bot killer's calling card: a line from its pool, or null.
 export function deathCard(role) {
-  const lines = isCabal({ role }) ? L.card.cabal : L.card[role]
-  return lines ? pick(lines) : ''
+  const k = isCabal({ role }) ? 'cardCabal' : { serialKiller: 'cardSerialKiller', arsonist: 'cardArsonist', werewolf: 'cardWerewolf' }[role]
+  return k ? line(k) : null
 }
 
 // ---------- reading humans ----------

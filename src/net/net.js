@@ -55,6 +55,9 @@ let pending = [] // messages queued while connecting
 let retry = 0
 let retryTimer = null
 
+// An error to show: { code, v } for the client to translate (online.err.*), or the server's own text.
+const problem = (m) => (m.code ? { code: m.code, v: m.v, msg: m.msg } : m.msg ? { msg: m.msg } : null)
+
 const url = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
 
 function connect() {
@@ -92,10 +95,10 @@ function connect() {
       case 'gone':
         wanted = null
         store(ROOM_KEY, null)
-        set({ room: null, state: null, chat: [], clock: null, error: m.msg ?? null })
+        set({ room: null, state: null, chat: [], clock: null, error: problem(m) })
         break
       case 'error':
-        set({ error: m.msg })
+        set({ error: problem(m) })
         break
       default:
         break
@@ -105,7 +108,7 @@ function connect() {
     ws = null
     if (!wanted) {
       pending = []
-      return set({ status: 'offline', error: opened ? null : 'Can’t reach the game server. Start it with `npm run host` (or `npm run server` next to `npm run dev`).' })
+      return set({ status: 'offline', error: opened ? null : { code: 'unreachable' } })
     }
     set({ status: 'reconnecting' })
     retryTimer = setTimeout(connect, Math.min(8000, 500 * 2 ** retry++))

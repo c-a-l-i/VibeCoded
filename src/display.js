@@ -4,12 +4,8 @@ import { useSyncExternalStore } from 'react'
 
 const KEY = 'degen-arcade-display'
 
-export const VISION = [
-  { id: 'std', name: 'Standard', note: 'Full-color palette' },
-  { id: 'deutan', name: 'Deuteranopia', note: 'Red–green · the most common' },
-  { id: 'protan', name: 'Protanopia', note: 'Red–green · reds look dark' },
-  { id: 'tritan', name: 'Tritanopia', note: 'Blue–yellow' },
-]
+// Mode names and notes are in the translations under display.modes.
+export const VISION = [{ id: 'std' }, { id: 'deutan' }, { id: 'protan' }, { id: 'tritan' }]
 
 function read() {
   try {

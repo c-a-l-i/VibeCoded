@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { BOARD, OWNABLE, spaceVars } from '../data/board.js'
-import { money, netWorth } from '../engine/game.js'
+import { OWNABLE, spaceVars } from '../data/board.js'
+import { netWorth } from '../engine/game.js'
 import DisplayButton from './DisplaySettings.jsx'
+import LanguageButton from './LanguageButton.jsx'
+import { t, N, fmt, money } from '../i18n/index.js'
 
 function PlayerCard({ state, p, openModal }) {
   const prev = useRef(p.money)
@@ -13,8 +15,8 @@ function PlayerCard({ state, p, openModal }) {
     if (!d) return
     const id = Math.random()
     setDeltas((x) => [...x, { id, d }])
-    const t = setTimeout(() => setDeltas((x) => x.filter((y) => y.id !== id)), 1600)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDeltas((x) => x.filter((y) => y.id !== id)), 1600)
+    return () => clearTimeout(timer)
   }, [p.money])
 
   const active = state.current === p.id && state.phase !== 'gameover'
@@ -27,13 +29,13 @@ function PlayerCard({ state, p, openModal }) {
         <div className="player-id">
           <div className="player-name">
             {p.name}
-            {p.isAI && <span className="tag">{p.remote ? '🌐 ONLINE' : 'BOT'}</span>}
-            {p.inJail && <span className="tag warn">🔒 CUSTODY</span>}
+            {p.isAI && <span className="tag">{p.remote ? t('ui.tagOnline') : t('ui.tagBot')}</span>}
+            {p.inJail && <span className="tag warn">{t('mono.tagCustody')}</span>}
             {p.cards.length > 0 && <span className="tag">🎟️×{p.cards.length}</span>}
-            {p.bankrupt && <span className="tag neg">REKT</span>}
+            {p.bankrupt && <span className="tag neg">{t('mono.tagRekt')}</span>}
           </div>
           <div className="muted small">
-            {p.bankrupt ? 'Bankrupt' : `on ${BOARD[p.pos].name} · worth ${money(netWorth(state, p.id))}`}
+            {p.bankrupt ? t('mono.bankrupt') : t('mono.onWorth', { sp: N.space(p.pos), m: money(netWorth(state, p.id)) })}
           </div>
         </div>
         <div className="player-money mono">
@@ -53,10 +55,10 @@ function PlayerCard({ state, p, openModal }) {
               key={id}
               className={`holding ${state.props[id].mortgaged ? 'mortgaged' : ''}`}
               style={spaceVars(id)}
-              title={BOARD[id].name}
+              title={N.space(id)}
               onClick={() => openModal({ type: 'deed', id })}
             >
-              {state.props[id].houses === 5 ? 'DC' : state.props[id].houses || ''}
+              {state.props[id].houses === 5 ? t('mono.dcShort') : state.props[id].houses || ''}
             </button>
           ))}
         </div>
@@ -75,8 +77,8 @@ export default function Sidebar({ state, openModal, onQuit, onMenu }) {
     <aside className="sidebar">
       <div className="panel">
         <div className="panel-head">
-          <h2>Players</h2>
-          <span className="muted small">Turn {state.turn}</span>
+          <h2>{t('ui.players')}</h2>
+          <span className="muted small">{t('ui.turn', { n: state.turn })}</span>
         </div>
         <div className="players">
           {state.players.map((p) => (
@@ -87,31 +89,30 @@ export default function Sidebar({ state, openModal, onQuit, onMenu }) {
 
       <div className="panel toolbar">
         <button className="btn ghost" onClick={() => openModal({ type: 'portfolio' })}>
-          🗂️ Portfolio
+          {t('mono.portfolio')}
         </button>
         <button className="btn ghost" onClick={() => openModal({ type: 'trade' })}>
-          🤝 Trade
+          {t('ui.trade')}
         </button>
         <button className="btn ghost" onClick={onQuit}>
-          ↺ New game
+          {t('ui.newGame')}
         </button>
         <button className="btn ghost" onClick={onMenu}>
-          ⌂ Menu
+          {t('ui.menu')}
         </button>
+        <LanguageButton icon />
         <DisplayButton icon />
       </div>
 
       <div className="panel log-panel">
         <div className="panel-head">
-          <h2>On-chain activity</h2>
-          <span className="muted small">
-            🟩 {state.bank.houses} · 🏢 {state.bank.hotels} left
-          </span>
+          <h2>{t('ui.activity')}</h2>
+          <span className="muted small">{t('mono.bankLeft', { h: state.bank.houses, d: state.bank.hotels })}</span>
         </div>
         <ul className="log" ref={logRef}>
           {state.log.map((e) => (
             <li key={e.id} style={{ '--c': e.pid !== null ? state.players[e.pid].color : 'var(--muted)' }}>
-              {e.text}
+              {e.text ?? fmt(e, { ns: 'mono.log', players: state.players })}
             </li>
           ))}
         </ul>

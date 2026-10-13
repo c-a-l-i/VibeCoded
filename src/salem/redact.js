@@ -22,7 +22,7 @@ export function viewFor(s, seat) {
       id: p.id, num: p.num, key: p.key, name: p.name, isAI: p.isAI, avatar: p.avatar, color: p.color,
       alive: p.alive, revealed: p.revealed,
       role: mate ? p.role : MASK, startRole: mate ? p.startRole : MASK, vampAge: mate ? p.vampAge : 0,
-      will: '', willData: null, note: '', uses: {}, target: null, won: false, guilt: false, barrier: false,
+      will: '', willTr: null, willData: null, note: '', noteTr: null, uses: {}, target: null, won: false, guilt: false, barrier: false,
       memo: blankMemo(),
     }
   })
@@ -59,20 +59,21 @@ function scrub(s, m, V) {
   const { data: _data, ...msg } = m
   const mine = (pid) => V !== null && pid === V.id
   const spoke = m.from !== null && m.from !== undefined
-  const anon = (label) => ({ ...msg, from: undefined, anon: label })
+  // An anonymous speaker is shown by their role (the Custodian, a Maxi, the Oracle).
+  const anon = (role) => ({ ...msg, from: undefined, anon: role })
   if (m.room === 'jail') {
     const out = { ...msg, jailor: mine(m.jailor) ? V.id : -1 }
-    return spoke && m.from === m.jailor && !mine(m.jailor) ? { ...out, from: undefined, anon: '🔐 Custodian' } : out
+    return spoke && m.from === m.jailor && !mine(m.jailor) ? { ...out, from: undefined, anon: 'jailor' } : out
   }
-  if (m.room === 'vamp' && spoke && V?.role === 'vampireHunter') return anon('🧛 Maxi')
+  if (m.room === 'vamp' && spoke && V?.role === 'vampireHunter') return anon('vampire')
   if (m.room === 'seance') {
     const out = { ...msg, medium: mine(m.medium) ? V.id : -1 }
     const F = spoke ? s.players[m.from] : null
-    return F && F.alive && F.role === 'medium' && !mine(m.from) ? { ...out, from: undefined, anon: '🔮 Oracle' } : out
+    return F && F.alive && F.role === 'medium' && !mine(m.from) ? { ...out, from: undefined, anon: 'medium' } : out
   }
   if (m.room === 'dead' && spoke) {
     const F = s.players[m.from]
-    if (F.alive && F.role === 'medium' && !mine(m.from)) return anon('🔮 Oracle')
+    if (F.alive && F.role === 'medium' && !mine(m.from)) return anon('medium')
   }
   return msg
 }

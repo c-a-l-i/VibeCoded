@@ -1,5 +1,6 @@
 import { GEO, RES, TERRAIN, PIPS } from '../data.js'
 import { useDisplay } from '../../display.js'
+import { t, N } from '../../i18n/index.js'
 
 const S = 60 // hex size in SVG units
 const pt = (v) => [GEO.vertices[v].x * S, GEO.vertices[v].y * S]
@@ -21,19 +22,19 @@ function hexPoints(h, scale = 0.95) {
 }
 
 function Tile({ h, tile, hacker, hot }) {
-  const t = TERRAIN[tile.res]
+  const terr = TERRAIN[tile.res]
   const cx = h.x * S
   const cy = h.y * S
   const red = tile.num === 6 || tile.num === 8
   return (
-    <g className={`st-tile ${hot ? 'hot' : ''}`} style={{ '--glow': t.glow }}>
+    <g className={`st-tile ${hot ? 'hot' : ''}`} style={{ '--glow': terr.glow }}>
       <polygon points={hexPoints(h)} fill={`url(#st-fill-${tile.res})`} className="st-tile-hex" />
       <polygon points={hexPoints(h, 0.78)} className="st-tile-inner" />
       <text x={cx} y={cy - 17} className="st-tile-icon">
-        {tile.res === 'desert' ? t.icon : RES[tile.res].icon}
+        {tile.res === 'desert' ? terr.icon : RES[tile.res].icon}
       </text>
       <text x={cx} y={cy + 39} className="st-tile-name">
-        {t.name}
+        {N.terrain(tile.res)}
       </text>
       {tile.num && (
         <g className={`st-num ${red ? 'red' : ''}`}>
@@ -142,10 +143,10 @@ export default function HexBoard({ state, targets, hotNumber }) {
   const tokenOf = (pid) => state.players[pid].token
 
   return (
-    <svg className={`st-svg ${targets ? `picking-${targets.kind}` : ''}`} viewBox="-345 -320 690 640" role="img" aria-label="Game board">
+    <svg className={`st-svg ${targets ? `picking-${targets.kind}` : ''}`} viewBox="-345 -320 690 640" role="img" aria-label={t('catan.boardLabel')}>
       <defs>
-        {Object.entries(TERRAIN).map(([k, t]) => (
-          <radialGradient key={k} id={`st-fill-${k}`} cx="50%" cy="40%" r="70%" style={{ '--glow': t.glow }}>
+        {Object.entries(TERRAIN).map(([k, terr]) => (
+          <radialGradient key={k} id={`st-fill-${k}`} cx="50%" cy="40%" r="70%" style={{ '--glow': terr.glow }}>
             <stop offset="0%" className="st-stop-in" />
             <stop offset="100%" className="st-stop-out" />
           </radialGradient>

@@ -1,6 +1,7 @@
-import { ROLES } from '../roles.js'
-import { tally, nightInfo, votesNeeded, deathLine, grave, fullMoon } from '../rules.js'
+import { tally, nightInfo, votesNeeded, grave, fullMoon } from '../rules.js'
 import { knownRole } from '../view.js'
+import { msgText, willText, cardText } from '../text.js'
+import { t, tx, N } from '../../i18n/index.js'
 import { RoleName, Who, Clock } from './bits.jsx'
 
 // Seats spaced evenly by distance along the ring (equal angles would bunch them up at the narrow ends).
@@ -10,8 +11,8 @@ function seats(n) {
   if (seatCache[n]) return seatCache[n]
   const [rx, ry, aspect, steps] = [44, 41, 1.6, 720]
   const pts = Array.from({ length: steps + 1 }, (_, i) => {
-    const t = (i / steps) * 2 * Math.PI - Math.PI / 2
-    return [50 + rx * Math.cos(t), 50 + ry * Math.sin(t)]
+    const angle = (i / steps) * 2 * Math.PI - Math.PI / 2
+    return [50 + rx * Math.cos(angle), 50 + ry * Math.sin(angle)]
   })
   const len = [0]
   for (let i = 1; i <= steps; i++) len.push(len[i - 1] + Math.hypot((pts[i][0] - pts[i - 1][0]) * aspect, pts[i][1] - pts[i - 1][1]))
@@ -45,11 +46,9 @@ function Stage({ s }) {
       return (
         <div className="ts-stage">
           <div className="ts-stage-icon">☀️</div>
-          <strong>Day 1</strong>
-          <p className="muted small">gm! Get to know the town. No voting today.</p>
-          <span className="ts-stage-clock">
-            Night falls in <Clock ms={left} />
-          </span>
+          <strong>{t('salem.day', { n: 1 })}</strong>
+          <p className="muted small">{t('salem.day1Note')}</p>
+          <span className="ts-stage-clock">{tx('salem.nightIn', { t: <Clock ms={left} /> })}</span>
         </div>
       )
     case 'morning': {
@@ -58,11 +57,11 @@ function Stage({ s }) {
         return (
           <div className="ts-stage">
             <div className="ts-stage-icon">📈</div>
-            <strong>Day {s.day}</strong>
-            <p className="muted small">Nobody died last night. Bullish.</p>
+            <strong>{t('salem.day', { n: s.day })}</strong>
+            <p className="muted small">{t('salem.quietNight')}</p>
             {(s.morning?.news ?? []).map((n) => (
-              <p key={n} className="small">
-                {n}
+              <p key={JSON.stringify(n)} className="small">
+                {msgText(s, n)}
               </p>
             ))}
           </div>
@@ -70,21 +69,20 @@ function Stage({ s }) {
       const idx = Math.min(deaths.length - 1, Math.floor(s.clock / (s.dur / deaths.length)))
       const g = deaths[idx]
       const p = P[g.pid]
+      const will = willText(s, g)
       return (
         <div className="ts-stage ts-death" key={g.pid}>
-          <span className="eyebrow">
-            Day {s.day} · {idx + 1} of {deaths.length} found dead
-          </span>
+          <span className="eyebrow">{t('salem.foundDead', { n: s.day, i: idx + 1, k: deaths.length })}</span>
           <div className="ts-stage-icon">{p.avatar}</div>
           <strong>
             <Who p={p} />
           </strong>
-          <p className="small">{deathLine(s, g).replace(`${p.name} was `, 'was ')}</p>
+          <p className="small">{msgText(s, { k: 'deathShort', v: { causes: g.causes } })}</p>
           <RoleName role={g.role ?? 'cleaned'} />
-          {g.will && <pre className="ts-will-snip">{g.will.split('\n').slice(0, 4).join('\n')}</pre>}
+          {will && <pre className="ts-will-snip">{will.split('\n').slice(0, 4).join('\n')}</pre>}
           {g.cards.map((c) => (
-            <p key={c} className="ts-card-snip">
-              🃏 “{c}”
+            <p key={JSON.stringify(c)} className="ts-card-snip">
+              🃏 “{cardText(s, c)}”
             </p>
           ))}
         </div>
@@ -94,26 +92,22 @@ function Stage({ s }) {
       return (
         <div className="ts-stage">
           <div className="ts-stage-icon">💬</div>
-          <strong>Discussion</strong>
-          <p className="muted small">Claim, accuse, share results.</p>
-          <span className="ts-stage-clock">
-            Voting opens in <Clock ms={left} />
-          </span>
+          <strong>{t('salem.discussion')}</strong>
+          <p className="muted small">{t('salem.discussNote')}</p>
+          <span className="ts-stage-clock">{tx('salem.votingIn', { t: <Clock ms={left} /> })}</span>
         </div>
       )
     case 'voting': {
-      const t = tally(s)
-      const top = Object.entries(t)
+      const votes = tally(s)
+      const top = Object.entries(votes)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
       const need = votesNeeded(s)
       return (
         <div className="ts-stage">
           <div className="ts-stage-icon">🗳️</div>
-          <strong>Voting</strong>
-          <p className="muted small">
-            {need} votes put someone on trial · trial {s.trials + 1} of 3
-          </p>
+          <strong>{t('salem.voting')}</strong>
+          <p className="muted small">{t('salem.votingNote', { n: need, k: s.trials + 1 })}</p>
           <div className="ts-tally">
             {top.map(([pid, n]) => (
               <div key={pid} className="ts-tally-row" style={{ '--c': P[pid].color }}>
@@ -127,9 +121,7 @@ function Stage({ s }) {
               </div>
             ))}
           </div>
-          <span className="ts-stage-clock">
-            <Clock ms={left} /> left
-          </span>
+          <span className="ts-stage-clock">{tx('salem.left', { t: <Clock ms={left} /> })}</span>
         </div>
       )
     }
@@ -138,17 +130,17 @@ function Stage({ s }) {
     case 'lastwords':
       return (
         <div className="ts-stage ts-trial">
-          <span className="eyebrow">{s.phase === 'defense' ? 'On trial' : s.phase === 'judgement' ? 'Judgement' : 'Last words'}</span>
+          <span className="eyebrow">{t(s.phase === 'defense' ? 'salem.onTrial' : s.phase === 'judgement' ? 'salem.judgement' : 'salem.lastWords')}</span>
           <div className="ts-stage-icon">{acc.avatar}</div>
           <strong>
             <Who p={acc} />
           </strong>
           <p className="muted small">
             {s.phase === 'defense'
-              ? 'Defend yourself. Only the accused may speak.'
+              ? t('salem.defendNote')
               : s.phase === 'judgement'
-                ? `Guilty or innocent? ${Object.keys(s.judge).length} voted so far.`
-                : 'Any last words before the slash?'}
+                ? t('salem.judgeNote', { n: Object.keys(s.judge).length })
+                : t('salem.lastNote')}
           </p>
           <span className="ts-stage-clock">
             <Clock ms={left} />
@@ -159,7 +151,7 @@ function Stage({ s }) {
       return (
         <div className={`ts-stage ts-verdict ${s.trial.convicted ? 'bad' : 'good'}`}>
           <div className="ts-stage-icon">{s.trial.convicted ? '🔨' : '😇'}</div>
-          <strong>{s.trial.convicted ? 'GUILTY' : 'INNOCENT'}</strong>
+          <strong>{t(s.trial.convicted ? 'salem.guiltyBig' : 'salem.innocentBig')}</strong>
           <p className="mono">
             {s.trial.g} – {s.trial.i}
           </p>
@@ -170,18 +162,16 @@ function Stage({ s }) {
       return (
         <div className="ts-stage ts-moon">
           <div className="ts-stage-icon">{fullMoon(s) ? '🌕' : '🌙'}</div>
-          <strong>Night {s.day}</strong>
-          <p className="muted small">{fullMoon(s) ? 'Full moon. Lunatics rampage tonight.' : 'The town sleeps…'}</p>
-          <span className="ts-stage-clock">
-            Dawn in <Clock ms={left} />
-          </span>
+          <strong>{t('salem.night', { n: s.day })}</strong>
+          <p className="muted small">{t(fullMoon(s) ? 'salem.moonNote' : 'salem.sleepNote')}</p>
+          <span className="ts-stage-clock">{tx('salem.dawnIn', { t: <Clock ms={left} /> })}</span>
         </div>
       )
     default:
       return (
         <div className="ts-stage">
           <div className="ts-stage-icon">🏁</div>
-          <strong>Game over</strong>
+          <strong>{t('salem.gameOver')}</strong>
         </div>
       )
   }
@@ -190,7 +180,7 @@ function Stage({ s }) {
 export default function Town({ state: s, me, view, act, onDead }) {
   const actor = typeof me === 'number' ? me : null
   const mode = clickMode(s, actor)
-  const t = s.phase === 'voting' ? tally(s) : {}
+  const votes = s.phase === 'voting' ? tally(s) : {}
   const mine = actor !== null ? (s.phase === 'night' ? (s.actions[actor]?.t ?? []) : [s.votes[actor]]) : []
   const spots = seats(s.players.length)
   const V = actor !== null ? s.players[actor] : null
@@ -214,13 +204,13 @@ export default function Town({ state: s, me, view, act, onDead }) {
           const ok = p.alive && mode?.ok(p.id)
           const jailed = s.jail?.prisoner === p.id && (view === 'all' || s.jail.jailor === actor || s.jail.prisoner === actor)
           const badges = []
-          if (p.revealed) badges.push(['🐋', 'Revealed Whale (3 votes)'])
-          if (jailed) badges.push(['🧊', 'In Cold Storage'])
-          if (V?.role === 'executioner' && V.target === p.id) badges.push(['🎯', 'Your target'])
-          if ((V?.role === 'arsonist' || view === 'all') && s.doused[p.id] && p.alive) badges.push(['🕳️', 'Doused'])
-          if (s.phase === 'night' && V?.role === 'jailor' && s.jailPick === p.id) badges.push(['🧊', 'Locking up'])
-          if (p.alive && s.blackmailed[p.id] === s.day && s.phase !== 'night') badges.push(['📸', 'Blackmailed today'])
-          if (!p.isAI) badges.push(['👤', 'Human'])
+          if (p.revealed) badges.push(['🐋', t('salem.badge.whale')])
+          if (jailed) badges.push(['🧊', t('salem.badge.jailed')])
+          if (V?.role === 'executioner' && V.target === p.id) badges.push(['🎯', t('salem.badge.target')])
+          if ((V?.role === 'arsonist' || view === 'all') && s.doused[p.id] && p.alive) badges.push(['🕳️', t('salem.badge.doused')])
+          if (s.phase === 'night' && V?.role === 'jailor' && s.jailPick === p.id) badges.push(['🧊', t('salem.badge.locking')])
+          if (p.alive && s.blackmailed[p.id] === s.day && s.phase !== 'night') badges.push(['📸', t('salem.badge.blackmailed')])
+          if (!p.isAI) badges.push(['👤', t('salem.badge.human')])
           return (
             <button
               key={p.id}
@@ -234,20 +224,20 @@ export default function Town({ state: s, me, view, act, onDead }) {
               ].join(' ')}
               style={{ '--x': `${x}%`, '--y': `${y}%`, '--c': p.color }}
               onClick={() => click(p)}
-              title={p.alive ? (ok ? (mode.kind === 'vote' ? `Vote against ${p.name}` : `Target ${p.name}`) : p.name) : `${p.name} — read their switch`}
+              title={p.alive ? (ok ? t(mode.kind === 'vote' ? 'salem.voteAgainst' : 'salem.targetP', { p: p.name }) : p.name) : t('salem.readSwitch', { p: p.name })}
             >
               <span className="ts-num mono">{p.num}</span>
-              {t[p.id] ? <span className="ts-votes mono">{t[p.id]}</span> : null}
+              {votes[p.id] ? <span className="ts-votes mono">{votes[p.id]}</span> : null}
               <span className="ts-avatar">{p.alive ? p.avatar : '🪦'}</span>
               <span className="ts-name">
                 {p.name}
-                {p.id === actor && <span className="ts-me-tag">you</span>}
+                {p.id === actor && <span className="ts-me-tag">{t('salem.youTag')}</span>}
               </span>
               <span className="ts-tagline">
                 {role ? (
                   <RoleName role={role} short />
                 ) : claim ? (
-                  <span className="muted">says {ROLES[claim].name}</span>
+                  <span className="muted">{t('salem.says', { role: N.role(claim) })}</span>
                 ) : (
                   <span className="muted">?</span>
                 )}
@@ -261,7 +251,7 @@ export default function Town({ state: s, me, view, act, onDead }) {
                   ))}
                 </span>
               )}
-              {!p.alive && grave(s, p.id) && <span className="ts-dead-day mono">{grave(s, p.id).when === 'day' ? '⚖️ D' : '🔪 N'}{grave(s, p.id).day}</span>}
+              {!p.alive && grave(s, p.id) && <span className="ts-dead-day mono">{grave(s, p.id).when === 'day' ? '⚖️ ' : '🔪 '}{t(grave(s, p.id).when === 'day' ? 'salem.dayShort' : 'salem.nightShort', { n: grave(s, p.id).day })}</span>}
             </button>
           )
         })}

@@ -4,17 +4,15 @@ import { RESOURCES, RES, bagSize } from '../data.js'
 import { tradeCheck, tradeRate } from '../engine.js'
 import { wouldAccept } from '../ai.js'
 import { ResPicker } from './bits.jsx'
+import { t, tx, N, fmt } from '../../i18n/index.js'
 
 function Swap({ state, act }) {
   const p = state.players[state.current]
   const [give, setGive] = useState(null)
   return (
     <div className="st-swap">
-      <p className="hint">
-        Swap with the market at 4:1. Nodes on a harbor unlock a <b>DEX</b> (3:1, any resource) or a <b>CEX</b> pool (2:1 for one
-        resource).
-      </p>
-      <div className="eyebrow">You give</div>
+      <p className="hint">{tx('catan.swapHint')}</p>
+      <div className="eyebrow">{t('ui.youGive')}</div>
       <div className="st-res-row">
         {RESOURCES.map((r) => {
           const rate = tradeRate(state, p.id, r)
@@ -29,12 +27,12 @@ function Swap({ state, act }) {
               <span>
                 {rate}× {RES[r].icon}
               </span>
-              <span className="small muted">have {p.hand[r]}</span>
+              <span className="small muted">{t('catan.have', { n: p.hand[r] })}</span>
             </button>
           )
         })}
       </div>
-      <div className="eyebrow">You get 1</div>
+      <div className="eyebrow">{t('catan.getOne')}</div>
       <div className="st-res-row">
         {RESOURCES.map((r) => (
           <button
@@ -45,7 +43,7 @@ function Swap({ state, act }) {
             onClick={() => act({ type: 'BANK_TRADE', give, get: r })}
           >
             <span>{RES[r].icon}</span>
-            <span className="small muted">{RES[r].name}</span>
+            <span className="small muted">{N.res(r)}</span>
           </button>
         ))}
       </div>
@@ -70,19 +68,20 @@ function Otc({ state, act, onClose }) {
     <div className="st-otc">
       <div className="trade-grid">
         <div className="trade-side" style={{ '--c': p.color }}>
-          <h3>You send</h3>
+          <h3>{t('catan.youSend')}</h3>
           <ResPicker value={give} onChange={setGive} max={p.hand} disabled={Object.fromEntries(RESOURCES.map((r) => [r, get[r] > 0]))} />
         </div>
         <div className="trade-arrow">⇄</div>
         <div className="trade-side" style={{ '--c': 'var(--violet)' }}>
-          <h3>You want</h3>
+          <h3>{t('catan.youWant')}</h3>
           <ResPicker value={get} onChange={setGet} disabled={Object.fromEntries(RESOURCES.map((r) => [r, give[r] > 0]))} />
         </div>
       </div>
       <div className="st-counterparties">
         {others.map((o) => {
           const trade = { from: p.id, to: o.id, give, get }
-          const check = ready ? tradeCheck(state, trade) : { ok: false, reason: 'Build an offer' }
+          const check = ready ? tradeCheck(state, trade) : { ok: false, reason: { k: 'buildOffer' } }
+          const reason = check.ok ? '' : fmt(check.reason, { ns: 'catan.why', players: state.players })
           const accepts = check.ok && (!o.isAI || o.remote || wouldAccept(state, o.id, trade))
           return (
             <div key={o.id} className="st-cp" style={{ '--c': o.color }}>
@@ -91,22 +90,18 @@ function Otc({ state, act, onClose }) {
                 {o.name}
               </span>
               <span className="muted small">
-                {o.remote
-                  ? check.ok
-                    ? 'they decide on their screen'
-                    : check.reason
-                  : o.isAI
-                    ? !check.ok
-                      ? check.reason
-                      : accepts
-                        ? '✅ will take it'
-                        : '❌ not interested'
-                    : check.ok
-                      ? 'hand them the screen'
-                      : check.reason}
+                {!check.ok
+                  ? reason
+                  : o.remote
+                    ? t('catan.theyDecide')
+                    : o.isAI
+                      ? accepts
+                        ? t('catan.willTake')
+                        : t('catan.notInterested')
+                      : t('catan.handScreen')}
               </span>
               <button className="btn tiny" disabled={!accepts} onClick={() => execute(o.id)}>
-                {o.remote ? '📨 Send offer' : o.isAI ? 'Execute' : `Accept as ${o.name}`}
+                {o.remote ? t('ui.sendOffer') : o.isAI ? t('catan.executeTrade') : t('catan.acceptAs', { p: o.name })}
               </button>
             </div>
           )
@@ -120,13 +115,13 @@ export default function TradeModal({ state, act, onClose }) {
   const [tab, setTab] = useState('swap')
   const p = state.players[state.current]
   return (
-    <Modal title="Trading desk" onClose={onClose} wide>
+    <Modal title={t('catan.desk')} onClose={onClose} wide>
       <div className="tabs" style={{ '--c': p.color }}>
         <button className={`tab ${tab === 'swap' ? 'on' : ''}`} onClick={() => setTab('swap')}>
-          🏦 Market swap
+          {t('catan.marketSwap')}
         </button>
         <button className={`tab ${tab === 'otc' ? 'on' : ''}`} onClick={() => setTab('otc')}>
-          🤝 OTC with players
+          {t('catan.otc')}
         </button>
       </div>
       {tab === 'swap' ? <Swap state={state} act={act} /> : <Otc state={state} act={act} onClose={onClose} />}

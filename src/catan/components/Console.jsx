@@ -3,12 +3,14 @@ import { COSTS, DEV, bagSize } from '../data.js'
 import { actingPlayer, canBuild, handSize, playableDev, victimsAt } from '../engine.js'
 import Dice from '../../components/Dice.jsx'
 import { Who, Thinking, Cost, ResPicker } from './bits.jsx'
+import { t, tx, fmt } from '../../i18n/index.js'
 
 const BUILDS = [
-  ['channel', '⚡', 'Channel'],
-  ['node', '🟩', 'Node'],
-  ['dc', '🏢', 'Data Center'],
+  ['channel', '⚡', 'catan.channel'],
+  ['node', '🟩', 'catan.node'],
+  ['dc', '🏢', 'catan.dataCenter'],
 ]
+const why = (state, check) => (check.reason ? fmt(check.reason, { ns: 'catan.why', players: state.players }) : undefined)
 
 function Discard({ state, act, pid }) {
   const p = state.players[pid]
@@ -16,12 +18,10 @@ function Discard({ state, act, pid }) {
   const [pick, setPick] = useState({})
   return (
     <div className="actions">
-      <div className="status">
-        💥 <Who p={p} /> is over-leveraged ({handSize(p)} cards) — liquidate <b>{need}</b>
-      </div>
+      <div className="status">{tx('catan.overLeveraged', { p: <Who p={p} />, n: handSize(p), k: need })}</div>
       <ResPicker value={pick} onChange={setPick} max={p.hand} />
       <button className="btn primary" disabled={bagSize(pick) !== need} onClick={() => act({ type: 'DISCARD', cards: pick })}>
-        Liquidate {bagSize(pick)}/{need}
+        {t('catan.liquidate', { a: bagSize(pick), b: need })}
       </button>
     </div>
   )
@@ -37,16 +37,9 @@ function Panel({ state, act, mode, setMode, openModal }) {
     case 'setup':
       return (
         <div className="status">
-          <Who p={actor} /> — genesis round {state.setup.step < state.players.length ? 1 : 2}:{' '}
-          {state.setup.node === null ? (
-            <>
-              tap a glowing spot to <b>spin up a node</b>
-              {state.setup.step >= state.players.length && ' (it pays out its neighbors)'}
-            </>
-          ) : (
-            <>
-              now <b>open a channel</b> from it
-            </>
+          {tx(
+            state.setup.node !== null ? 'catan.setupChannel' : state.setup.step >= state.players.length ? 'catan.setupNode2' : 'catan.setupNode',
+            { p: <Who p={actor} />, n: state.setup.step < state.players.length ? 1 : 2 },
           )}
         </div>
       )
@@ -55,16 +48,14 @@ function Panel({ state, act, mode, setMode, openModal }) {
       const canHack = playableDev(state, pid).includes('knight')
       return (
         <div className="actions">
-          <div className="status">
-            <Who p={p} /> — mine the next block
-          </div>
+          <div className="status">{tx('catan.mineNext', { p: <Who p={p} /> })}</div>
           <div className="row">
             <button className="btn primary big" onClick={() => act({ type: 'ROLL' })}>
-              🎲 Roll dice
+              {t('ui.rollDice')}
             </button>
             {canHack && (
               <button className="btn" onClick={() => act({ type: 'PLAY_DEV', card: 'knight' })}>
-                🥷 Deploy Hacker first
+                {t('catan.hackerFirst')}
               </button>
             )}
           </div>
@@ -77,19 +68,17 @@ function Panel({ state, act, mode, setMode, openModal }) {
 
     case 'hacker':
       return (
-        <div className="status">
-          🥷 <Who p={p} /> — tap a tile to send <b>the Hacker</b>. It blocks mining there and drains a neighbor.
-        </div>
+        <div className="status">{tx('catan.moveHacker', { p: <Who p={p} /> })}</div>
       )
 
     case 'steal':
       return (
         <div className="actions">
-          <div className="status">Who gets drained?</div>
+          <div className="status">{t('catan.whoDrained')}</div>
           <div className="row">
             {victimsAt(state, state.board.hacker, p.id).map((o) => (
               <button key={o} className="btn" style={{ '--c': state.players[o].color }} onClick={() => act({ type: 'STEAL', pid: o })}>
-                {state.players[o].token} {state.players[o].name} · {handSize(state.players[o])} cards
+                {t('catan.victim', { token: state.players[o].token, name: state.players[o].name, n: handSize(state.players[o]) })}
               </button>
             ))}
           </div>
@@ -99,11 +88,9 @@ function Panel({ state, act, mode, setMode, openModal }) {
     case 'rollup':
       return (
         <div className="actions">
-          <div className="status">
-            🛣️ Layer 2 Rollup — tap to open <b>{state.freeChannels}</b> more free channel{state.freeChannels > 1 ? 's' : ''}
-          </div>
+          <div className="status">{tx('catan.rollup', { n: state.freeChannels })}</div>
           <button className="btn ghost" onClick={() => act({ type: 'END_ROLLUP' })}>
-            Done
+            {t('ui.done')}
           </button>
         </div>
       )
@@ -113,8 +100,8 @@ function Panel({ state, act, mode, setMode, openModal }) {
       return (
         <div className="actions">
           <div className="status small">
-            <Who p={p} /> — build, trade, then end your turn
-            {mode && <span className="muted"> · tap a glowing spot (or pick again to cancel)</span>}
+            {tx('catan.buildTrade', { p: <Who p={p} /> })}
+            {mode && <span className="muted">{t('catan.tapSpot')}</span>}
           </div>
           <div className="st-builds">
             {BUILDS.map(([kind, icon, label]) => {
@@ -124,11 +111,11 @@ function Panel({ state, act, mode, setMode, openModal }) {
                   key={kind}
                   className={`btn st-build ${mode === kind ? 'on' : ''}`}
                   disabled={!check.ok}
-                  title={check.reason}
+                  title={why(state, check)}
                   onClick={() => setMode(mode === kind ? null : kind)}
                 >
                   <span>
-                    {icon} {label}
+                    {icon} {t(label)}
                   </span>
                   <Cost cost={COSTS[kind]} />
                 </button>
@@ -137,22 +124,23 @@ function Panel({ state, act, mode, setMode, openModal }) {
             <button
               className="btn st-build"
               disabled={!canBuild(state, pid, 'dev').ok}
-              title={canBuild(state, pid, 'dev').reason}
+              title={why(state, canBuild(state, pid, 'dev'))}
               onClick={() => act({ type: 'BUY_DEV' })}
             >
-              <span>📜 Smart Contract</span>
+              <span>{t('catan.smartContract')}</span>
               <Cost cost={COSTS.dev} />
             </button>
           </div>
           <div className="row">
             <button className="btn ghost" onClick={() => openModal({ type: 'trade' })}>
-              🤝 Trade
+              {t('ui.trade')}
             </button>
             <button className="btn ghost" disabled={!devs.length} onClick={() => openModal({ type: 'dev' })}>
-              📜 Execute contract{devs.length ? ` (${devs.map((d) => DEV[d].icon).join('')})` : ''}
+              {t('catan.execute')}
+              {devs.length ? ` (${devs.map((d) => DEV[d].icon).join('')})` : ''}
             </button>
             <button className="btn primary" onClick={() => act({ type: 'END_TURN' })}>
-              End turn ⏭
+              {t('catan.endTurn')}
             </button>
           </div>
         </div>
@@ -176,7 +164,7 @@ export default function Console({ state, rolling, act, mode, setMode, openModal 
         </div>
       )}
       <div className="st-console-body">
-        {rolling ? <div className="status">Mining…</div> : <Panel state={state} act={act} mode={mode} setMode={setMode} openModal={openModal} />}
+        {rolling ? <div className="status">{t('catan.mining')}</div> : <Panel state={state} act={act} mode={mode} setMode={setMode} openModal={openModal} />}
       </div>
     </section>
   )

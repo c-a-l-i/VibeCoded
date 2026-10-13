@@ -56,6 +56,9 @@ const rooms = new Map() // code -> room
 const sockets = new Map() // client id -> ws
 
 const send = (ws, msg) => ws && ws.readyState === 1 && ws.send(JSON.stringify(msg))
+// Errors carry a code the client translates (online.err.*), plus English text for older clients.
+const fail = (ws, code, msg, v) => send(ws, { t: 'error', code, msg, ...(v ? { v } : {}) })
+const problem = (code, msg) => Object.assign(new Error(msg), { code })
 const cleanName = (n) => String(n ?? '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Anon'
 
 function newCode() {
@@ -182,7 +185,7 @@ function stopGame(room) {
 }
 
 function createRoom(id, name, game) {
-  if (rooms.size >= MAX_ROOMS) throw new Error('The server is full right now.')
+  if (rooms.size >= MAX_ROOMS) throw problem('full', 'The server is full right now.')
   const g = GAMES[game]
   const room = {
     code: newCode(),
@@ -268,7 +271,7 @@ function startGame(room) {
     return { name, bot: !s.client }
   })
   const state = g.start(seats, room.options)
-  if (!state) throw new Error('That role list can’t be dealt. Try another one.')
+  if (!state) throw problem('cantDeal', 'That role list can’t be dealt. Try another one.')
   room.owners = new Map()
   room.seats.forEach((s, i) => {
     if (s.client) room.owners.set(g.playerFor(state, i), s.client)
@@ -287,7 +290,7 @@ function startGame(room) {
 
 function handle(ws, msg) {
   if (msg.t === 'hello') {
-    if (typeof msg.id !== 'string' || !/^[\w-]{6,40}$/.test(msg.id)) return send(ws, { t: 'error', msg: 'Bad client id' })
+    if (typeof msg.id !== 'string' || !/^[\w-]{6,40}$/.test(msg.id)) return fail(ws, 'badId', 'Bad client id')
     const old = sockets.get(msg.id)
     if (old && old !== ws) {
       old.replaced = true
@@ -298,13 +301,13 @@ function handle(ws, msg) {
     sockets.set(ws.id, ws)
     return send(ws, { t: 'welcome', id: ws.id })
   }
-  if (!ws.id) return send(ws, { t: 'error', msg: 'Say hello first' })
+  if (!ws.id) return fail(ws, 'hello', 'Say hello first')
   const id = ws.id
   const room = ws.room ? rooms.get(ws.room) : null
 
   switch (msg.t) {
     case 'create': {
-      if (!GAMES[msg.game]) return send(ws, { t: 'error', msg: 'Unknown game' })
+      if (!GAMES[msg.game]) return fail(ws, 'unknownGame', 'Unknown game')
       if (room) leaveRoom(room, id)
       const r = createRoom(id, ws.name, msg.game)
       ws.room = r.code
@@ -312,7 +315,10 @@ function handle(ws, msg) {
     }
     case 'join': {
       const r = rooms.get(String(msg.code ?? '').toUpperCase())
-      if (!r) return send(ws, { t: 'gone', msg: `Room ${String(msg.code ?? '').toUpperCase()} doesn’t exist (anymore).` })
+      if (!r) {
+        const code = String(msg.code ?? '').toUpperCase().slice(0, 8)
+        return send(ws, { t: 'gone', code: 'gone', v: { code }, msg: `Room ${code} doesn’t exist (anymore).` })
+      }
       if (room && room !== r) leaveRoom(room, id)
       ws.room = r.code
       joinRoom(r, id, ws.name)
@@ -335,12 +341,12 @@ function handle(ws, msg) {
     default:
       break
   }
-  if (!room) return send(ws, { t: 'error', msg: 'You’re not in a room' })
+  if (!room) return fail(ws, 'notInRoom', 'You’re not in a room')
   // If the host has dropped off, whoever reaches for a host control takes over.
   if (room.host !== id && sockets.get(room.host)?.room !== room.code) room.host = id
   const isHost = room.host === id
   const g = GAMES[room.game]
-  const hostOnly = () => (isHost ? true : (send(ws, { t: 'error', msg: 'Only the host can do that.' }), false))
+  const hostOnly = () => (isHost ? true : (fail(ws, 'hostOnly', 'Only the host can do that.'), false))
 
   switch (msg.t) {
     case 'sit': {
@@ -369,7 +375,7 @@ function handle(ws, msg) {
     case 'options': {
       if (room.status !== 'lobby' || !hostOnly() || !g.sanitize) return
       const next = g.sanitize(msg.options, room.options)
-      if (!resize(room, g.listFor(next).length)) return send(ws, { t: 'error', msg: 'Too many people are seated for that list.' })
+      if (!resize(room, g.listFor(next).length)) return fail(ws, 'tooMany', 'Too many people are seated for that list.')
       room.options = next
       return sendRoom(room)
     }
@@ -386,7 +392,7 @@ function handle(ws, msg) {
       try {
         startGame(room)
       } catch (e) {
-        send(ws, { t: 'error', msg: e.message })
+        fail(ws, e.code ?? 'server', e.message)
       }
       return
     case 'lobby':
@@ -404,11 +410,11 @@ function handle(ws, msg) {
     case 'act': {
       if (room.status !== 'playing' || !room.state) return
       const pid = playerOf(room, id)
-      if (pid === null) return send(ws, { t: 'error', msg: 'You’re watching this game.' })
+      if (pid === null) return fail(ws, 'watching', 'You’re watching this game.')
       const action = msg.action
       if (action?.type === 'OFFER') {
         const o = g.offer?.(room.state, pid, action.action)
-        if (!o) return send(ws, { t: 'error', msg: 'That trade isn’t possible right now.' })
+        if (!o) return fail(ws, 'tradeNow', 'That trade isn’t possible right now.')
         room.offer = { id: Date.now(), from: o.from, to: o.to, action: action.action, declined: false }
         return sendRoom(room)
       }
@@ -426,7 +432,7 @@ function handle(ws, msg) {
           room.offer = null
           const next = g.accept(room.state, o.action)
           if (next) commit(room, next)
-          else send(ws, { t: 'error', msg: 'That trade isn’t possible anymore.' })
+          else fail(ws, 'tradeGone', 'That trade isn’t possible anymore.')
         } else {
           room.offer = { ...o, declined: true }
           setTimeout(() => {
@@ -461,7 +467,7 @@ function handle(ws, msg) {
       return sendRoom(room)
     }
     default:
-      return send(ws, { t: 'error', msg: `Unknown message ${msg.t}` })
+      return fail(ws, 'unknown', `Unknown message ${msg.t}`, { t: String(msg.t).slice(0, 20) })
   }
 }
 
@@ -483,8 +489,9 @@ wss.on('connection', (ws) => {
     try {
       handle(ws, msg)
     } catch (e) {
+      if (e.code) return fail(ws, e.code, e.message)
       console.error('message failed', msg.t, e)
-      send(ws, { t: 'error', msg: 'Something went wrong on the server.' })
+      fail(ws, 'server', 'Something went wrong on the server.')
     }
   })
   ws.on('close', () => {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from '../../components/Modal.jsx'
 import { RESOURCES, RES, DEV } from '../data.js'
 import { playableDev } from '../engine.js'
+import { t, N } from '../../i18n/index.js'
 
 export default function DevModal({ state, act, onClose }) {
   const p = state.players[state.current]
@@ -13,25 +14,25 @@ export default function DevModal({ state, act, onClose }) {
   }
 
   return (
-    <Modal title="Execute a smart contract" onClose={onClose}>
-      <p className="hint">One contract per turn, and not on the turn you deployed it. Rare NFTs count automatically.</p>
+    <Modal title={t('catan.devTitle')} onClose={onClose}>
+      <p className="hint">{t('catan.devHint')}</p>
       {playable.map((card) => (
         <div key={card} className="st-dev">
           <div className="st-dev-head">
             <span className="st-dev-icon">{DEV[card].icon}</span>
             <div>
-              <strong>{DEV[card].name}</strong>
-              <div className="muted small">{DEV[card].text}</div>
+              <strong>{N.dev(card)}</strong>
+              <div className="muted small">{N.devText(card)}</div>
             </div>
           </div>
           {card === 'knight' && (
             <button className="btn primary" onClick={() => run({ card })}>
-              Deploy the Hacker
+              {t('catan.deployHacker')}
             </button>
           )}
           {card === 'road' && (
             <button className="btn primary" onClick={() => run({ card })}>
-              Roll up 2 channels
+              {t('catan.rollUp2')}
             </button>
           )}
           {card === 'monopoly' && (
@@ -39,7 +40,7 @@ export default function DevModal({ state, act, onClose }) {
               {RESOURCES.map((r) => (
                 <button key={r} className="btn st-res-btn" style={{ '--rc': RES[r].color }} onClick={() => run({ card, res: r })}>
                   <span>{RES[r].icon}</span>
-                  <span className="small muted">{RES[r].name}</span>
+                  <span className="small muted">{N.res(r)}</span>
                 </button>
               ))}
             </div>
@@ -58,24 +59,24 @@ export default function DevModal({ state, act, onClose }) {
                       onClick={() => setPlenty([...plenty, r])}
                     >
                       <span>{RES[r].icon}{picked ? ` ×${picked}` : ''}</span>
-                      <span className="small muted">bank {state.bank[r]}</span>
+                      <span className="small muted">{t('catan.bankN', { n: state.bank[r] })}</span>
                     </button>
                   )
                 })}
               </div>
               <div className="row">
                 <button className="btn ghost" disabled={!plenty.length} onClick={() => setPlenty([])}>
-                  Clear
+                  {t('catan.clear')}
                 </button>
                 <button className="btn primary" disabled={plenty.length !== 2} onClick={() => run({ card, res: plenty })}>
-                  Claim {plenty.map((r) => RES[r].icon).join(' ')}
+                  {t('catan.claim', { icons: plenty.map((r) => RES[r].icon).join(' ') })}
                 </button>
               </div>
             </>
           )}
         </div>
       ))}
-      {!playable.length && <p className="muted center-text">Nothing executable right now.</p>}
+      {!playable.length && <p className="muted center-text">{t('catan.nothingToRun')}</p>}
     </Modal>
   )
 }

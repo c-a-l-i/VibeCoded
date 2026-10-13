@@ -21,6 +21,16 @@ The 🎨 button (top right of the menu and setup screens, and in every game's to
 
 All colors are CSS variables in `src/theme.css` (players `--p1`…`--p15`, sets `--g-*`, resources `--r-*`, `--good`/`--bad`/`--warn`/`--neutral`), with one block per color-vision mode. Game data refers to them as `var(--…)` instead of hex values.
 
+## Languages 🌍
+
+The arcade plays in English, Español, Français, Deutsch, Português, 简体中文, 日本語 and 한국어. The first visit picks the browser’s language, and the 🌍 button (next to 🎨 on the menu, setup and lobby screens, and in every game’s toolbar) switches it at any time, mid-game included. The choice is saved per browser.
+
+Everything is translated: menus, board spaces, cards, resources, all 33 roles, the game logs and the Town of Solana bots’ chat. In an online game each player reads it all in their own language. A Spanish and a Korean player at the same table each see the bots, the log and each other’s quick-chat lines (🪪 Claim, 🚩 Accuse, 📊 Share results…) in their own language. Text players type themselves stays as written. Bots understand claims and accusations typed in English, and the quick-chat buttons, which work in every language.
+
+How it works: the engines and the server never write sentences. Every log line, chat line, night result and error is a message key plus params (`{ k: 'bought', v: { p: 2, sp: 39, m: 400 } }`), and each screen renders it with `fmt()` from `src/i18n/index.js`. Bots pick a line from a pool by index, so the same pick shows up in every language. Saves from before translations still load and show their English text.
+
+To add a language: copy `src/i18n/es.js`, translate it (the `data` section holds the games’ own names and rules text), add it to `LANGS` and `LOADERS` in `src/i18n/index.js` and to `LANGS` in `scripts/check-i18n.mjs`, then run `npm run i18n`. To add text, put the English in `src/i18n/en.js` and the same key in every language. `npm run i18n` reports anything missing, extra or with mismatched `{placeholders}`.
+
 ## Playing online with friends 🌐
 
 `npm run host` builds the app and starts one Node server (`server/index.js`) that serves it and hosts game rooms over a WebSocket at `/ws`. Set `PORT` to change the port from 8787. On startup it prints the address friends on your Wi-Fi can open.
@@ -149,12 +159,13 @@ While developing, run `npm run server` next to `npm run dev`. Vite forwards `/ws
 
 7 to 15 seats (15 for the preset modes), with any mix of humans and bots. With one human you play against the bots. With several, a pass-the-device screen hides each player’s role, night action and private chats. With no humans you can watch the bots play with every role visible.
 
-Bots claim roles, share results, fake-claim (evil bots choose covers that fit a Sleuth result), counter-claim fakes, write dead man’s switches, vote and judge. They act on an opinion of every player built from claims, role-list math, reported results, wills and vote history. They also read human chat: “I’m the Auditor”, “Gwei is sus”, “vote 5” or “Hal claim?” all register. Phase timers have four paces plus pause, and a “Ready” button skips the rest of a phase once every human is ready.
+Bots claim roles, share results, fake-claim (evil bots choose covers that fit a Sleuth result), counter-claim fakes, write dead man’s switches, vote and judge. They act on an opinion of every player built from claims, role-list math, reported results, wills and vote history. They also read human chat in English: “I’m the Auditor”, “Gwei is sus”, “vote 5” or “Hal claim?” all register, as do the quick-chat buttons in any language. Phase timers have four paces plus pause, and a “Ready” button skips the rest of a phase once every human is ready.
 
 ## Code layout
 
 - `src/App.jsx`, `src/Menu.jsx`, `src/games.js`: start menu that launches each game
 - `src/theme.css`, `src/display.js`, `src/components/DisplaySettings.jsx`: color tokens per color-vision mode, the saved Display settings, and their modal
+- `src/i18n/`: translations (`index.js` language store, `t()`/`tx()` for UI text and `fmt()` for engine messages; `en.js` the English source; one file per language, loaded on demand) and `src/components/LanguageButton.jsx` the 🌍 picker
 - `server/`: online server (`index.js` rooms, lobby and WebSocket protocol; `games.js` per-game rules for turns, bots and what each seat sees)
 - `src/net/`: online client (`net.js` connection with reconnects, `Online.jsx` lobby, room bar and trade offers)
 - `src/catan/`: Settlers of Satoshi (`data.js` board + geometry, `engine.js` rules reducer, `ai.js` bots, `components/`)

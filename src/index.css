@@ -1008,13 +1008,16 @@ h2 {
 }
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
 }
+/* Labels run longer in some languages, so buttons wrap onto a second row instead of overflowing. */
 .toolbar .btn {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 13px;
   padding: 0.55em 0.5em;
+  white-space: nowrap;
 }
 .log-panel {
   flex: 1;
@@ -1505,6 +1508,34 @@ input[type='checkbox'] {
   position: absolute;
   top: 16px;
   right: 16px;
+}
+.corner-tools {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- language ---------- */
+
+/* The native <select> sits invisibly over the button, so clicking anywhere on it opens the system list. */
+.lang-btn {
+  position: relative;
+  cursor: pointer;
+}
+.lang-btn select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.lang-btn:has(select:focus-visible) {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+/* Wide letter-spacing and all caps are Latin-script styling; CJK text reads better without them. */
+:lang(zh, ja, ko) :is(h2, .eyebrow, .logo, .tag, .badge) {
+  letter-spacing: 0.04em;
 }
 .toolbar .btn.ds-icon {
   flex: none;
