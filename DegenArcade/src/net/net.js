@@ -82,6 +82,8 @@ function connect() {
       case 'room':
         wanted = m.room.code
         store(ROOM_KEY, wanted)
+        // The turn timer arrives as time left, so it counts down right even if this device's clock is off.
+        if (m.room.turnTimer?.left != null) m.room.turnTimer.ends = Date.now() + m.room.turnTimer.left
         set({ room: m.room })
         break
       case 'state':

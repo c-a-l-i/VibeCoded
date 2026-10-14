@@ -890,6 +890,13 @@ export default {
     muteHint: 'Stummschalten blendet alle Nachrichten der Person, alte und neue, für alle im Raum aus.',
     chatMuted: 'Der Host hat dich stummgeschaltet.',
     chatPlayersOnly: 'Gerade dürfen nur Spieler chatten.',
+    turnTimer: '⏱ Zug-Timer',
+    timerOff: 'Aus',
+    timerSec: '{n} Sekunden',
+    timerMin: '{n} Min.',
+    turnTimerNote: 'So lange darf jeder Zug dauern; die Uhr pausiert, während andere handeln. Läuft sie ab, beendet das Spiel den Zug für diese Person mit sicheren Zügen: würfeln, passen, Zug beenden. Der Host kann das während des Spiels über den 🌐-Raum-Button ändern.',
+    timeUp: '⏰ Zeit abgelaufen',
+    clockLabel: 'Verbleibende Zeit für {p}: {time}',
     err: {
       unreachable: 'Der Spielserver ist nicht erreichbar. Starte ihn mit `npm run host` (oder `npm run server` neben `npm run dev`).',
       badId: 'Ungültige Client-ID',

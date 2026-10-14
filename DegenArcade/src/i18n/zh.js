@@ -887,6 +887,13 @@ export default {
     muteHint: '禁言某人后，他以前和以后的所有消息都会对房间里的每个人隐藏。',
     chatMuted: '房主已将你禁言。',
     chatPlayersOnly: '现在只有玩家可以聊天。',
+    turnTimer: '⏱ 回合计时',
+    timerOff: '关闭',
+    timerSec: '{n} 秒',
+    timerMin: '{n} 分钟',
+    turnTimerNote: '每位玩家的回合最多这么长，其他人操作时计时暂停。时间到了，游戏会用稳妥的操作替该玩家结束回合：掷骰子、放弃、结束回合。房主可在游戏中通过 🌐 房间按钮更改。',
+    timeUp: '⏰ 时间到',
+    clockLabel: '{p} 剩余时间：{time}',
     err: {
       unreachable: '无法连接游戏服务器。请用 `npm run host` 启动（或在 `npm run dev` 旁运行 `npm run server`）。',
       badId: '客户端 ID 无效',

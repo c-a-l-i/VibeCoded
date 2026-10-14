@@ -124,7 +124,7 @@ export default function CatanApp({ onMenu, net = null }) {
           <section className="st-board">
             <HexBoard state={state} targets={boardTargets(state, activeMode, act)} hotNumber={hot} />
           </section>
-          <Console state={state} rolling={rolling} act={act} mode={activeMode} setMode={setMode} openModal={setModal} />
+          <Console state={state} rolling={rolling} act={act} mode={activeMode} setMode={setMode} openModal={setModal} clock={net?.clock} />
         </div>
         <Sidebar state={state} viewer={viewer} onQuit={quit} onMenu={onMenu} chat={net?.chat} />
       </main>

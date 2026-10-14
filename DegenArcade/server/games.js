@@ -13,7 +13,7 @@ import { viewFor, chatFor } from '../src/salem/redact.js'
 const SERVER_ONLY = new Set(['NEW_GAME', 'LOAD', 'QUIT', 'STEP', 'TICK', 'PACE'])
 
 // Shared shape of the two turn-based board games.
-function boardGame({ reducer, actingPlayer, rollDice, bot, delays, accepts, data, min, max, view }) {
+function boardGame({ reducer, actingPlayer, rollDice, bot, delays, accepts, idle, data, min, max, view }) {
   const apply = (state, action) => {
     const next = reducer(state, action)
     return next === state ? null : next
@@ -61,6 +61,19 @@ function boardGame({ reducer, actingPlayer, rollDice, bot, delays, accepts, data
         },
       }
     },
+    // The human the game is waiting on, and whose turn it is, for the turn timer. Settlers' genesis round counts
+    // each placement as a turn of its own. Null while bots play, tokens move or the game is over.
+    waitingOn(state) {
+      if (state.phase === 'gameover' || state.phase === 'moving') return null
+      const pid = actingPlayer(state)
+      if (state.players[pid].isAI) return null
+      return { pid, turn: [state.turn, state.setup?.step].join('.') }
+    },
+    // The move to make for a human whose turn timer ran out.
+    idle(state) {
+      const a = idle(state)
+      return a?.type === 'ROLL' ? { type: 'ROLL', dice: rollDice() } : a
+    },
     view,
   }
 }
@@ -73,6 +86,12 @@ export const GAMES = {
     bot: monoBot,
     delays: { card: 1800, auction: 650, buy: 1100, default: 850 },
     accepts: (s, offer) => aiAcceptsTrade(s, offer),
+    // Out of time: roll, send the deed to auction, pass, or end the turn, without spending the player's cash.
+    // A debt can't be skipped, so the bot raises the money as it would for itself.
+    idle: (s) =>
+      ({ preroll: { type: 'ROLL' }, buy: { type: 'AUCTION' }, card: { type: 'RESOLVE_CARD' }, auction: { type: 'PASS_BID' }, postroll: { type: 'END_TURN' } })[
+        s.phase
+      ] ?? monoBot(s),
     data: monoData,
     min: 2,
     max: 6,
@@ -87,6 +106,9 @@ export const GAMES = {
     bot: catanBot,
     delays: { setup: 650, preroll: 800, hacker: 1000, steal: 700, discard: 900, default: 750 },
     accepts: (s, t) => wouldAccept(s, t.to, t),
+    // Out of time: roll, or end the turn without building. Moves that can't be skipped (genesis placements,
+    // liquidating, the Hacker, free channels) are made the way a bot would make them.
+    idle: (s) => ({ preroll: { type: 'ROLL' }, main: { type: 'END_TURN' } })[s.phase] ?? catanBot(s),
     data: catanData,
     min: 3,
     max: 4,

@@ -887,6 +887,13 @@ export default {
     muteHint: 'ミュートすると、その人のメッセージは過去の分も含めてルームの全員から見えなくなります。',
     chatMuted: 'ホストにミュートされました。',
     chatPlayersOnly: '今はプレイヤーだけがチャットできます。',
+    turnTimer: '⏱ ターンタイマー',
+    timerOff: 'オフ',
+    timerSec: '{n}秒',
+    timerMin: '{n}分',
+    turnTimerNote: '1ターンの持ち時間です。他のプレイヤーが操作している間は止まります。時間切れになると、無難な手（サイコロを振る・パス・ターン終了）でそのプレイヤーのターンを自動で終えます。ホストはゲーム中でも🌐ルームボタンから変更できます。',
+    timeUp: '⏰ 時間切れ',
+    clockLabel: '{p}の残り時間：{time}',
     err: {
       unreachable: 'ゲームサーバーに接続できません。`npm run host` で起動してください（または `npm run dev` と並べて `npm run server`）。',
       badId: 'クライアントIDが不正です',

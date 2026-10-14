@@ -224,7 +224,7 @@ function ActionPanel({ state, rolling, act, openModal }) {
   }
 }
 
-export default function Center({ state, rolling, act, openModal }) {
+export default function Center({ state, rolling, act, openModal, clock }) {
   const recent = state.log.slice(-4).reverse()
   return (
     <div className="center">
@@ -244,6 +244,7 @@ export default function Center({ state, rolling, act, openModal }) {
         </div>
       </div>
       <Dice dice={state.dice} rolling={rolling} />
+      {clock}
       <ActionPanel state={state} rolling={rolling} act={act} openModal={openModal} />
       <ul className="ticker">
         {recent.map((e) => (
