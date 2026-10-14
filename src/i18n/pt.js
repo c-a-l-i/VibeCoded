@@ -890,6 +890,13 @@ export default {
     muteHint: 'Silenciar alguém esconde todas as mensagens dessa pessoa, antigas e novas, para todo mundo na sala.',
     chatMuted: 'O anfitrião silenciou você.',
     chatPlayersOnly: 'No momento, só os jogadores podem conversar.',
+    turnTimer: '⏱ Cronômetro de vez',
+    timerOff: 'Desligado',
+    timerSec: '{n} segundos',
+    timerMin: '{n} min',
+    turnTimerNote: 'Cada vez dura no máximo isso, e o relógio pausa enquanto os outros jogam. Quando acaba, o jogo termina a vez desse jogador com jogadas seguras: rolar, passar, encerrar a vez. O anfitrião pode mudar isso durante a partida pelo botão 🌐 da sala.',
+    timeUp: '⏰ Tempo esgotado',
+    clockLabel: 'Tempo restante de {p}: {time}',
     err: {
       unreachable: 'Não foi possível conectar ao servidor do jogo. Inicie com `npm run host` (ou `npm run server` junto com `npm run dev`).',
       badId: 'Id de cliente inválido',

@@ -924,6 +924,13 @@ export default {
     muteHint: 'Muting someone hides all their messages, old and new, for everyone in the room.',
     chatMuted: 'The host muted you.',
     chatPlayersOnly: 'Only players can chat right now.',
+    turnTimer: '⏱ Turn timer',
+    timerOff: 'Off',
+    timerSec: '{n} seconds',
+    timerMin: '{n} min',
+    turnTimerNote: 'Each player’s turn gets this long, and their clock pauses while others act. When it runs out, the game finishes the turn for them with safe moves: roll, pass, end the turn. The host can change it mid-game from the 🌐 room button.',
+    timeUp: '⏰ Time’s up',
+    clockLabel: 'Time left for {p}: {time}',
     err: {
       unreachable: 'Can’t reach the game server. Start it with `npm run host` (or `npm run server` next to `npm run dev`).',
       badId: 'Bad client id',

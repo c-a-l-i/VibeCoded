@@ -7,6 +7,7 @@ import CryptopolyApp from '../CryptopolyApp.jsx'
 import CatanApp from '../catan/CatanApp.jsx'
 import SalemApp from '../salem/SalemApp.jsx'
 import TableTalk, { SpectatorChat } from './TableTalk.jsx'
+import TurnClock, { TimerTag, TurnTimerPicker } from './TurnClock.jsx'
 import './online.css'
 import { CornerTools } from '../components/LanguageButton.jsx'
 import { t, tx, look, N, tradeSide, bagText } from '../i18n/index.js'
@@ -172,6 +173,7 @@ function Lobby({ n }) {
 
           {!salem && (
             <div className="on-options">
+              {room.turnTimer && <TurnTimerPicker room={room} />}
               <SpectatorChat room={room} />
             </div>
           )}
@@ -281,12 +283,14 @@ function OnlineBar({ n, isHost }) {
       <button className="on-bar-chip" onClick={() => setOpen(!open)} title={t('online.room')}>
         🌐 <span className="mono">{room.code}</span> · {t('online.onlineN', { n: here })}
         {away.length > 0 && <span className="tag warn">{t('online.awayN', { n: away.length })}</span>}
+        <TimerTag room={room} />
       </button>
       <Status n={n} />
       {open && (
         <div className="panel on-bar-menu">
           <CopyLink code={room.code} />
           {room.you.pid === null && <p className="small muted">{t('online.watchingNote')}</p>}
+          {room.turnTimer && <TurnTimerPicker room={room} />}
           {isHost &&
             away.map((m) => (
               <button key={m.id} className="btn tiny wide" onClick={() => net.send({ t: 'takeover', pid: m.pid })}>
@@ -327,6 +331,8 @@ function Game({ n }) {
     pace: (pace) => net.send({ t: 'host', action: { type: 'PACE', pace } }),
     // Town of Solana has its own chat, with rooms and rules; the board games share this one.
     chat: room.game !== 'salem' ? <TableTalk talk={n.talk} room={room} players={n.state?.players} /> : null,
+    // The host's turn timer, counting down whoever the game is waiting on.
+    clock: room.turnTimer?.pid != null ? <TurnClock timer={room.turnTimer} players={n.state?.players} /> : null,
     toLobby: () => {
       if (!isHost) return alert(t('online.hostOnlyNew'))
       if (n.state?.phase === 'gameover' || confirm(t('online.endConfirm'))) net.send({ t: 'lobby' })

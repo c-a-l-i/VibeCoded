@@ -891,6 +891,13 @@ export default {
     muteHint: 'Mettre quelqu’un en sourdine masque tous ses messages, anciens et nouveaux, pour toute la salle.',
     chatMuted: 'L’hôte vous a mis en sourdine.',
     chatPlayersOnly: 'Pour l’instant, seuls les joueurs peuvent discuter.',
+    turnTimer: '⏱ Minuteur de tour',
+    timerOff: 'Désactivé',
+    timerSec: '{n} secondes',
+    timerMin: '{n} min',
+    turnTimerNote: 'Chaque tour dure au plus ce temps, et l’horloge s’arrête pendant que les autres jouent. Une fois écoulé, le jeu finit le tour pour ce joueur avec des coups sûrs : lancer, passer, finir le tour. L’hôte peut le changer en cours de partie avec le bouton 🌐 du salon.',
+    timeUp: '⏰ Temps écoulé',
+    clockLabel: 'Temps restant pour {p} : {time}',
     err: {
       unreachable: 'Impossible de joindre le serveur de jeu. Lancez-le avec `npm run host` (ou `npm run server` à côté de `npm run dev`).',
       badId: 'Identifiant client invalide',

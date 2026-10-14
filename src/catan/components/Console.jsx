@@ -152,7 +152,7 @@ function Panel({ state, act, mode, setMode, openModal }) {
   }
 }
 
-export default function Console({ state, rolling, act, mode, setMode, openModal }) {
+export default function Console({ state, rolling, act, mode, setMode, openModal, clock }) {
   const sum = state.dice[0] + state.dice[1]
   const showDice = state.phase !== 'setup'
   return (
@@ -164,6 +164,7 @@ export default function Console({ state, rolling, act, mode, setMode, openModal 
         </div>
       )}
       <div className="st-console-body">
+        {clock}
         {rolling ? <div className="status">{t('catan.mining')}</div> : <Panel state={state} act={act} mode={mode} setMode={setMode} openModal={openModal} />}
       </div>
     </section>

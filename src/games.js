@@ -5,3 +5,6 @@ export const GAMES = [
   { id: 'catan', mark: '⬡' },
   { id: 'salem', mark: '⚖️' },
 ]
+
+// Turn timer lengths in seconds the host can pick for online Cryptopoly and Settlers. 0 means no timer, the default.
+export const TURN_TIMES = [0, 30, 60, 90, 120, 180, 300]

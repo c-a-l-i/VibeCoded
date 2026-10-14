@@ -10,6 +10,7 @@ import { join, normalize, extname, sep } from 'node:path'
 import { networkInterfaces } from 'node:os'
 import { WebSocketServer } from 'ws'
 import { GAMES } from './games.js'
+import { TURN_TIMES } from '../src/games.js'
 
 const PORT = Number(process.env.PORT ?? 8787)
 const DIST = join(import.meta.dirname, '..', 'dist')
@@ -29,6 +30,7 @@ const ROOM_TTL = 60 * 60 * 1000 // rooms with nobody connected are dropped after
 const TALK_KEEP = 100 // chat lines a room remembers for people who join or reconnect
 const TALK_BURST = 5 // chat lines one person can send…
 const TALK_WINDOW = 10 * 1000 // …in this many milliseconds
+const LATE_STEP = 900 // once a turn timer has run out, the moves the game makes for that player come at a bot's pace
 
 // ---------- static files ----------
 
@@ -108,6 +110,8 @@ function roomInfo(room, id) {
     })),
     offer: room.offer,
     chat: { spectators: room.chatSpectators, muted: [...room.muted] },
+    // Games with a turn timer: its length (0 = off), and who's on the clock with how many ms left.
+    turnTimer: g.idle ? { secs: room.turnSecs, pid: room.clock?.pid ?? null, left: room.clock ? Math.max(0, room.clock.ends - Date.now()) : null } : null,
     you: { id, seat: seatOf(room, id), pid: playerOf(room, id) },
   }
 }
@@ -173,7 +177,10 @@ function schedule(room) {
     }
     return
   }
-  const step = g.next(room.state)
+  // Bots and moving tokens go on their own. When a human's turn timer runs out, the game makes safe moves for
+  // them at a bot's pace until their turn is over.
+  const clock = turnClock(room)
+  const step = g.next(room.state) ?? (clock && { delay: Math.max(LATE_STEP, clock.ends - Date.now()), run: g.idle })
   if (!step) return
   room.timer = setTimeout(() => {
     const action = step.run(room.state)
@@ -182,11 +189,37 @@ function schedule(room) {
   }, step.delay)
 }
 
+// The turn timer, when the host has turned it on: each human gets `turnSecs` seconds for their turn. The clock
+// pauses while someone else acts (bidding in their auction, discarding, a bot) and picks up where it left off.
+// Returns the running clock, if any, and tells the room whenever it starts, stops or passes to someone else.
+function turnClock(room) {
+  const g = GAMES[room.game]
+  const wait = room.turnSecs && g.waitingOn ? g.waitingOn(room.state) : null
+  const was = room.clock
+  const key = wait && `${wait.turn}:${wait.pid}`
+  if (key === (was?.key ?? null)) return was
+  const now = Date.now()
+  if (was) room.banked.set(was.key, Math.max(0, was.ends - now))
+  if (wait && wait.turn !== room.bankedTurn) {
+    room.banked.clear()
+    room.bankedTurn = wait.turn
+  }
+  room.clock = wait && { key, pid: wait.pid, ends: now + (room.banked.get(key) ?? room.turnSecs * 1000) }
+  sendRoom(room)
+  return room.clock
+}
+
+function resetClock(room) {
+  room.clock = null
+  room.banked.clear()
+}
+
 function stopGame(room) {
   clearTimeout(room.timer)
   clearInterval(room.ticker)
   room.timer = null
   room.ticker = null
+  resetClock(room)
 }
 
 function createRoom(id, name, game) {
@@ -209,6 +242,10 @@ function createRoom(id, name, game) {
     talkId: 0,
     chatSpectators: true, // the host can turn spectator chat off
     muted: new Set(), // client ids the host muted; kept if they leave and come back
+    turnSecs: 0, // the host's turn timer, off unless they turn it on
+    clock: null, // the running turn timer: { key, pid, ends }
+    banked: new Map(), // time left on paused clocks this turn
+    bankedTurn: null,
     idleSince: null,
   }
   const count = g.listFor ? g.listFor(room.options).length : g.seats
@@ -504,6 +541,14 @@ function handle(ws, msg) {
       else room.muted.delete(msg.id)
       return sendRoom(room)
     }
+    case 'turnTimer':
+      // Host turns the turn timer on or off, or changes its length, in the lobby or mid-game. The turn being
+      // played right now gets the new length from the start.
+      if (!hostOnly() || !g.idle || !TURN_TIMES.includes(msg.secs)) return
+      room.turnSecs = msg.secs
+      resetClock(room)
+      schedule(room)
+      return sendRoom(room)
     case 'takeover': {
       // Host hands a disconnected player's seat to a bot.
       if (room.status !== 'playing' || !hostOnly()) return

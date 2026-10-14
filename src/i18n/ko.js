@@ -889,6 +889,13 @@ export default {
     muteHint: '채팅을 금지하면 그 사람의 메시지가 예전 것까지 모두 방에 있는 모두에게 숨겨집니다.',
     chatMuted: '방장이 채팅을 금지했습니다.',
     chatPlayersOnly: '지금은 플레이어만 채팅할 수 있습니다.',
+    turnTimer: '⏱ 턴 타이머',
+    timerOff: '끄기',
+    timerSec: '{n}초',
+    timerMin: '{n}분',
+    turnTimerNote: '한 턴에 주어지는 시간이며, 다른 사람이 행동하는 동안에는 멈춥니다. 시간이 다 되면 게임이 무난한 수(주사위 굴리기, 패스, 턴 종료)로 그 플레이어의 턴을 대신 끝냅니다. 방장은 게임 중에도 🌐 방 버튼에서 바꿀 수 있습니다.',
+    timeUp: '⏰ 시간 초과',
+    clockLabel: '{p} 남은 시간: {time}',
     err: {
       unreachable: '게임 서버에 연결할 수 없습니다. `npm run host`로 실행하세요 (또는 `npm run dev` 옆에서 `npm run server`).',
       badId: '잘못된 클라이언트 ID',
