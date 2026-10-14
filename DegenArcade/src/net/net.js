@@ -135,10 +135,11 @@ export const net = {
     set({ error: null })
     send({ t: 'create', game })
   },
-  join(code) {
+  // `seat` is the token from a host's seat link, to take over that seat mid-game.
+  join(code, seat = null) {
     wanted = String(code).trim().toUpperCase()
     set({ error: null })
-    send({ t: 'join', code: wanted })
+    send({ t: 'join', code: wanted, ...(seat ? { seat } : {}) })
   },
   leave() {
     wanted = null
@@ -171,10 +172,14 @@ export function useNet() {
   )
 }
 
-// A ?room=CODE invite link in the address bar.
+// A ?room=CODE invite link in the address bar, maybe with &seat=TOKEN from the host to take over a seat.
 export function inviteCode() {
   const code = new URLSearchParams(location.search).get('room')
   return code && /^[A-Za-z]{4}$/.test(code) ? code.toUpperCase() : null
 }
+export function inviteSeat() {
+  const seat = new URLSearchParams(location.search).get('seat')
+  return seat && /^[\w-]{6,40}$/.test(seat) ? seat : null
+}
 
-export const inviteLink = (code) => `${location.origin}${location.pathname}?room=${code}`
+export const inviteLink = (code, seat = null) => `${location.origin}${location.pathname}?room=${code}${seat ? `&seat=${seat}` : ''}`

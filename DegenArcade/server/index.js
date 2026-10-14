@@ -8,6 +8,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, normalize, extname, sep } from 'node:path'
 import { networkInterfaces } from 'node:os'
+import { randomBytes } from 'node:crypto'
 import { WebSocketServer } from 'ws'
 import { GAMES } from './games.js'
 import { TURN_TIMES } from '../src/games.js'
@@ -31,6 +32,7 @@ const TALK_KEEP = 100 // chat lines a room remembers for people who join or reco
 const TALK_BURST = 5 // chat lines one person can send…
 const TALK_WINDOW = 10 * 1000 // …in this many milliseconds
 const LATE_STEP = 900 // once a turn timer has run out, the moves the game makes for that player come at a bot's pace
+const HURRY = 15 * 1000 // what the host's Hurry button leaves on the clock
 
 // ---------- static files ----------
 
@@ -83,6 +85,8 @@ const memberOf = (room, id) => room.members.get(id)
 const seatOf = (room, id) => room.seats.findIndex((s) => s.client === id)
 const online = (room) => [...room.members.values()].filter((m) => sockets.has(m.id) && sockets.get(m.id).room === room.code)
 
+const newToken = () => randomBytes(9).toString('base64url')
+
 // Player id controlled by a client in the running game, or null.
 function playerOf(room, id) {
   for (const [pid, cid] of room.owners) if (cid === id) return pid
@@ -110,8 +114,18 @@ function roomInfo(room, id) {
     })),
     offer: room.offer,
     chat: { spectators: room.chatSpectators, muted: [...room.muted] },
-    // Games with a turn timer: its length (0 = off), and who's on the clock with how many ms left.
-    turnTimer: g.idle ? { secs: room.turnSecs, pid: room.clock?.pid ?? null, left: room.clock ? Math.max(0, room.clock.ends - Date.now()) : null } : null,
+    // Games with a turn timer: its length (0 = off), who's on the clock with how many ms left, and which human
+    // the game is waiting on (the host can hurry them even with the timer off).
+    turnTimer: g.idle
+      ? {
+          secs: room.turnSecs,
+          pid: room.clock?.pid ?? null,
+          left: room.clock ? Math.max(0, room.clock.ends - Date.now()) : null,
+          waiting: room.waiting?.pid ?? null,
+        }
+      : null,
+    // For the host: a one-time invite link for each seat a bot is playing, so a person can take it over.
+    seatLinks: id === room.host ? openSeats(room) : null,
     you: { id, seat: seatOf(room, id), pid: playerOf(room, id) },
   }
 }
@@ -194,18 +208,23 @@ function schedule(room) {
 // Returns the running clock, if any, and tells the room whenever it starts, stops or passes to someone else.
 function turnClock(room) {
   const g = GAMES[room.game]
-  const wait = room.turnSecs && g.waitingOn ? g.waitingOn(room.state) : null
-  const was = room.clock
+  const wait = g.waitingOn?.(room.state) ?? null
   const key = wait && `${wait.turn}:${wait.pid}`
-  if (key === (was?.key ?? null)) return was
-  const now = Date.now()
-  if (was) room.banked.set(was.key, Math.max(0, was.ends - now))
-  if (wait && wait.turn !== room.bankedTurn) {
-    room.banked.clear()
-    room.bankedTurn = wait.turn
+  const was = room.clock
+  const waited = room.waiting
+  room.waiting = wait && { pid: wait.pid, key }
+  if (key !== (was?.key ?? null)) {
+    const now = Date.now()
+    if (was) room.banked.set(was.key, Math.max(0, was.ends - now))
+    if (wait && wait.turn !== room.bankedTurn) {
+      room.banked.clear()
+      room.bankedTurn = wait.turn
+    }
+    // A paused turn picks up its time left. A turn the host hurried keeps its clock even with the timer off.
+    const left = key && (room.banked.get(key) ?? (room.turnSecs ? room.turnSecs * 1000 : null))
+    room.clock = left != null ? { key, pid: wait.pid, ends: now + left } : null
   }
-  room.clock = wait && { key, pid: wait.pid, ends: now + (room.banked.get(key) ?? room.turnSecs * 1000) }
-  sendRoom(room)
+  if (room.clock !== was || room.waiting?.key !== waited?.key) sendRoom(room)
   return room.clock
 }
 
@@ -214,11 +233,44 @@ function resetClock(room) {
   room.banked.clear()
 }
 
+// Seats a bot is playing mid-game that a person could take over, with their invite tokens.
+function openSeats(room) {
+  const g = GAMES[room.game]
+  if (room.status !== 'playing' || !room.state || !g.claimable) return []
+  return room.state.players.filter((p) => !room.owners.has(p.id) && g.claimable(room.state, p.id)).map((p) => ({ pid: p.id, token: room.seatLinks.get(p.id) }))
+}
+
+// Someone opened the host's seat link: they take over that player mid-game, keeping everything it holds, under
+// their own name. Each link works once.
+function takeSeat(room, id, pid) {
+  const g = GAMES[room.game]
+  const m = memberOf(room, id)
+  const before = room.state.players[pid].name
+  let name = m.name
+  for (let k = 2; room.state.players.some((p) => p.id !== pid && p.name.toLowerCase() === name.toLowerCase()); k++) name = `${m.name.slice(0, 12)}${k}`
+  room.banned.delete(id)
+  room.owners.set(pid, id)
+  room.seatLinks.set(pid, newToken())
+  const seat = room.seats.findIndex((_, i) => g.playerFor(room.state, i) === pid)
+  if (seat >= 0) room.seats[seat] = { name, bot: false, client: id }
+  say(room, 'tookSeat', { p: name, q: before })
+  commit(room, { ...room.state, players: room.state.players.map((p) => (p.id === pid ? { ...p, isAI: false, name } : p)) })
+}
+
+// A line from the room itself (the host removed someone, a seat was taken, the timer changed), shown in the chat
+// and translated on each screen.
+function say(room, k, v = {}) {
+  const line = { id: ++room.talkId, from: null, sys: { k, v } }
+  room.talk = [...room.talk.slice(1 - TALK_KEEP), line]
+  for (const x of online(room)) send(sockets.get(x.id), { t: 'talk', msgs: [line] })
+}
+
 function stopGame(room) {
   clearTimeout(room.timer)
   clearInterval(room.ticker)
   room.timer = null
   room.ticker = null
+  room.waiting = null
   resetClock(room)
 }
 
@@ -246,6 +298,9 @@ function createRoom(id, name, game) {
     clock: null, // the running turn timer: { key, pid, ends }
     banked: new Map(), // time left on paused clocks this turn
     bankedTurn: null,
+    waiting: null, // the human the game is waiting on: { pid, key }
+    banned: new Set(), // client ids the host removed; the room code won't let them back in
+    seatLinks: new Map(), // player id -> token of the one-time invite link for that seat
     idleSince: null,
   }
   const count = g.listFor ? g.listFor(room.options).length : g.seats
@@ -327,6 +382,7 @@ function startGame(room) {
   room.offer = null
   room.sent = new Map()
   room.state = state
+  room.seatLinks = new Map(state.players.map((p) => [p.id, newToken()]))
   sendRoom(room)
   schedule(room)
   sendState(room, { force: true })
@@ -366,11 +422,17 @@ function handle(ws, msg) {
         const code = String(msg.code ?? '').toUpperCase().slice(0, 8)
         return send(ws, { t: 'gone', code: 'gone', v: { code }, msg: `Room ${code} doesn’t exist (anymore).` })
       }
+      // A seat link from the host takes over that seat, even for someone the host removed earlier.
+      const claim = typeof msg.seat === 'string' ? openSeats(r).find((o) => o.token === msg.seat) : null
+      if (r.banned.has(id) && !claim) return send(ws, { t: 'gone', code: 'banned', msg: 'The host removed you from this room.' })
       if (room && room !== r) leaveRoom(room, id)
       ws.room = r.code
       joinRoom(r, id, ws.name)
       r.idleSince = null
       send(ws, { t: 'talk', msgs: r.talk, reset: true })
+      if (claim && playerOf(r, id) !== null) fail(ws, 'alreadyPlaying', 'You already have a seat in this game.')
+      else if (claim) takeSeat(r, id, claim.pid)
+      else if (msg.seat) fail(ws, 'seatGone', 'That seat link has expired, or someone already took the seat.')
       sendRoom(r)
       return sendState(r, { force: true })
     }
@@ -452,6 +514,7 @@ function handle(ws, msg) {
       room.owners = new Map()
       room.offer = null
       room.paused = false
+      room.seatLinks = new Map()
       for (const s of room.seats) if (s.client && !room.members.has(s.client)) Object.assign(s, { client: null, bot: true, name: botName(room) })
       sendRoom(room)
       for (const m of room.members.values()) send(sockets.get(m.id), { t: 'state', state: null })
@@ -548,7 +611,34 @@ function handle(ws, msg) {
       room.turnSecs = msg.secs
       resetClock(room)
       schedule(room)
+      if (room.status === 'playing') say(room, msg.secs ? 'timer' : 'timerOff', { secs: msg.secs })
       return sendRoom(room)
+    case 'hurry': {
+      // Host cuts the turn being played to 15 seconds to speed someone up, even with the timer off.
+      if (room.status !== 'playing' || !hostOnly() || !room.waiting) return
+      const ends = Date.now() + HURRY
+      if (room.clock && room.clock.ends <= ends) return
+      room.clock = { key: room.waiting.key, pid: room.waiting.pid, ends }
+      schedule(room)
+      say(room, 'hurry', { p: room.state.players[room.waiting.pid].name })
+      return sendRoom(room)
+    }
+    case 'kick': {
+      // Host removes someone from the room. A bot takes over their seat, and the room code won't let them back
+      // in. Only a seat link from the host will.
+      if (!hostOnly() || typeof msg.id !== 'string' || msg.id === id || !room.members.has(msg.id)) return
+      const pid = playerOf(room, msg.id)
+      const name = pid !== null ? room.state.players[pid].name : memberOf(room, msg.id).name
+      room.banned.add(msg.id)
+      if (pid !== null) room.seatLinks.set(pid, newToken())
+      const out = sockets.get(msg.id)
+      if (out?.room === room.code) {
+        out.room = null
+        send(out, { t: 'gone', code: 'kicked', v: { code: room.code }, msg: `The host removed you from room ${room.code}.` })
+      }
+      say(room, pid !== null ? 'removedPlayer' : 'removed', { p: name })
+      return leaveRoom(room, msg.id)
+    }
     case 'takeover': {
       // Host hands a disconnected player's seat to a bot.
       if (room.status !== 'playing' || !hostOnly()) return

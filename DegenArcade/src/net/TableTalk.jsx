@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { net } from './net.js'
 import Modal from '../components/Modal.jsx'
-import { t } from '../i18n/index.js'
+import CopyLink from './CopyLink.jsx'
+import { HurryButton, TurnTimerPicker } from './TurnClock.jsx'
+import { t, timerLength } from '../i18n/index.js'
+
+// The room's own lines (the timer changed, someone was removed, a seat was taken), in this screen's language.
+const sysText = ({ k, v }) => t(`online.sys.${k}`, k === 'timer' ? { len: timerLength(v.secs) } : v)
 
 // The host's switch for whether spectators may chat, in the lobby and in the chat's moderation section.
 export function SpectatorChat({ room }) {
@@ -22,11 +27,21 @@ export function SpectatorChat({ room }) {
   )
 }
 
-// Host tools: spectator chat on or off, and muting anyone in the room.
+// Host tools: the turn timer and Hurry, spectator chat, muting or removing anyone in the room, and seat links
+// that let someone take over a seat a bot is playing.
 function Moderate({ room, players, muted, onClose }) {
   const others = room.members.filter((m) => m.id !== net.id)
+  const seats = room.seatLinks ?? []
+  const remove = (m, p) =>
+    confirm(p ? t('online.removeConfirm', { p: p.name }) : t('online.removeWatcherConfirm', { p: m.name })) && net.send({ t: 'kick', id: m.id })
   return (
     <Modal title={t('online.modTitle')} onClose={onClose}>
+      {room.turnTimer && (
+        <>
+          <TurnTimerPicker room={room} />
+          <HurryButton room={room} players={players} />
+        </>
+      )}
       <SpectatorChat room={room} />
       <span className="eyebrow">{t('online.modPeople')}</span>
       {others.length ? (
@@ -44,6 +59,9 @@ function Moderate({ room, players, muted, onClose }) {
                 <button className={`btn tiny ${off ? '' : 'ghost'}`} onClick={() => net.send({ t: 'mute', id: m.id, on: !off })}>
                   {off ? t('online.unmute') : t('online.mute')}
                 </button>
+                <button className="btn tiny ghost danger" onClick={() => remove(m, p)}>
+                  {t('online.remove')}
+                </button>
               </li>
             )
           })}
@@ -52,12 +70,29 @@ function Moderate({ room, players, muted, onClose }) {
         <p className="hint">{t('online.modNobody')}</p>
       )}
       <p className="hint">{t('online.muteHint')}</p>
+      <span className="eyebrow">{t('online.modSeats')}</span>
+      {seats.length ? (
+        <ul className="talk-people">
+          {seats.map(({ pid, token }) => (
+            <li key={pid}>
+              <span className="talk-person">
+                🤖 {players?.[pid]?.token} {players?.[pid]?.name}
+              </span>
+              <CopyLink code={room.code} seat={token} label={t('online.seatLink')} className="btn tiny" />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="hint">{t('online.modNoBotSeats')}</p>
+      )}
+      <p className="hint">{t('online.seatsNote')}</p>
     </Modal>
   )
 }
 
 // Room chat for Cryptopoly and Settlers, where nothing is secret: everyone in the room, seated or watching,
-// sees every line. What people type goes out as written; only the labels around it are translated.
+// sees every line. What people type goes out as written; only the labels around it, and the room's own lines
+// about what the host did, are translated.
 export default function TableTalk({ talk, room, players }) {
   const [text, setText] = useState('')
   const [moderating, setModerating] = useState(false)
@@ -130,14 +165,20 @@ export default function TableTalk({ talk, room, players }) {
           }}
         >
           {shown.length ? (
-            shown.map((m) => (
-              <li key={m.id} className={m.from === net.id ? 'mine' : ''} style={{ '--c': m.color ?? 'var(--muted)' }}>
-                <b className="talk-name">
-                  {m.token ?? '👀'} {m.name}
-                </b>{' '}
-                {m.text}
-              </li>
-            ))
+            shown.map((m) =>
+              m.sys ? (
+                <li key={m.id} className="talk-sys">
+                  {sysText(m.sys)}
+                </li>
+              ) : (
+                <li key={m.id} className={m.from === net.id ? 'mine' : ''} style={{ '--c': m.color ?? 'var(--muted)' }}>
+                  <b className="talk-name">
+                    {m.token ?? '👀'} {m.name}
+                  </b>{' '}
+                  {m.text}
+                </li>
+              ),
+            )
           ) : (
             <li className="talk-empty">{t('online.chatEmpty')}</li>
           )}
@@ -164,7 +205,13 @@ export default function TableTalk({ talk, room, players }) {
         createPortal(
           <button className="talk-pill" title={t('online.showChat')} onClick={() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
             <span className="talk-pill-text">
-              💬 <b style={{ color: latest.color ?? 'inherit' }}>{latest.name}</b> {latest.text}
+              {latest.sys ? (
+                sysText(latest.sys)
+              ) : (
+                <>
+                  💬 <b style={{ color: latest.color ?? 'inherit' }}>{latest.name}</b> {latest.text}
+                </>
+              )}
             </span>
             {unread.length > 1 && <span className="talk-pill-n mono">{unread.length}</span>}
           </button>,
