@@ -213,6 +213,9 @@ export const N = {
 
 // Cryptopoly dollars in this language's style: $1,500 · 1 500 $ · 1.500 $.
 export const money = (n) => t('money', { n: Number(n).toLocaleString(LANGS.find((l) => l.id === lang).html) })
+// A turn timer length: "30 seconds", "2 min", or "Off" for none.
+export const timerLength = (secs) =>
+  !secs ? t('online.timerOff') : secs % 60 ? t('online.timerSec', { n: secs }) : t('online.timerMin', { n: secs / 60 })
 const resBag = (bag) =>
   Object.keys(RES)
     .filter((r) => bag?.[r])

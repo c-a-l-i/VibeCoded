@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Menu from './Menu.jsx'
 import Online from './net/Online.jsx'
-import { net, useNet, inviteCode } from './net/net.js'
+import { net, useNet, inviteCode, inviteSeat } from './net/net.js'
 import CryptopolyApp, { SAVE_KEY as CRYPTOPOLY_SAVE } from './CryptopolyApp.jsx'
 import CatanApp, { SAVE_KEY as CATAN_SAVE } from './catan/CatanApp.jsx'
 import SalemApp, { SAVE_KEY as SALEM_SAVE } from './salem/SalemApp.jsx'
@@ -36,11 +36,12 @@ export default function App() {
 
   useEffect(() => write(GAME_KEY, game), [game])
 
-  // Open an invite link (?room=CODE), or rejoin the room this browser was in before a refresh.
+  // Open an invite link (?room=CODE, or a seat link with &seat=TOKEN), or rejoin the room this browser was in
+  // before a refresh.
   useEffect(() => {
     const code = inviteCode()
     if (code) {
-      net.join(code)
+      net.join(code, inviteSeat())
       history.replaceState(null, '', location.pathname)
     } else net.resume()
   }, [])

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { net, inviteLink } from './net.js'
+import { net } from './net.js'
+import CopyLink from './CopyLink.jsx'
 import { GAMES } from '../games.js'
 import { PACES } from '../salem/engine.js'
 import RoleListPicker from '../salem/components/RoleListPicker.jsx'
@@ -29,24 +30,6 @@ function ErrorBanner({ n }) {
         ✕
       </button>
     </div>
-  )
-}
-
-function CopyLink({ code }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLink(code))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      prompt(t('online.copyPrompt'), inviteLink(code))
-    }
-  }
-  return (
-    <button className="btn" onClick={copy}>
-      {copied ? t('online.copied') : t('online.copyInvite')}
-    </button>
   )
 }
 
@@ -290,7 +273,6 @@ function OnlineBar({ n, isHost }) {
         <div className="panel on-bar-menu">
           <CopyLink code={room.code} />
           {room.you.pid === null && <p className="small muted">{t('online.watchingNote')}</p>}
-          {room.turnTimer && <TurnTimerPicker room={room} />}
           {isHost &&
             away.map((m) => (
               <button key={m.id} className="btn tiny wide" onClick={() => net.send({ t: 'takeover', pid: m.pid })}>

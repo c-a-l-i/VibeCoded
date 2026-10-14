@@ -69,6 +69,9 @@ function boardGame({ reducer, actingPlayer, rollDice, bot, delays, accepts, idle
       if (state.players[pid].isAI) return null
       return { pid, turn: [state.turn, state.setup?.step].join('.') }
     },
+    // Whether a person can take over this bot-run player mid-game with the host's seat link. Not once the
+    // player is out of the game, or the game is over.
+    claimable: (state, pid) => state.phase !== 'gameover' && state.players[pid].isAI && !state.players[pid].bankrupt,
     // The move to make for a human whose turn timer ran out.
     idle(state) {
       const a = idle(state)
